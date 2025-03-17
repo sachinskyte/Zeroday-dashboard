@@ -45,9 +45,10 @@ To ensure seamless functionality, configure the following settings within the da
 
 These URLs can be updated anytime through the settings panel in the dashboard UI.
 
-## 📄 License
+## Live Demo  
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+Check out the project in action: [Zeroday Dashboard](https://sachinskyte.github.io/Zeroday-dashboard/)  
+
 
 ## 🤝 Contributing
 
