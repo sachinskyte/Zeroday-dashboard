@@ -1,0 +1,286 @@
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 210 40% 98%;
+    --foreground: 222 47% 11%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 222 47% 11%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 222 47% 11%;
+
+    --primary: 221 83% 53%;
+    --primary-foreground: 210 40% 98%;
+
+    --secondary: 210 40% 96%;
+    --secondary-foreground: 222 47% 11%;
+
+    --muted: 210 40% 96%;
+    --muted-foreground: 215 16% 47%;
+
+    --accent: 210 40% 96%;
+    --accent-foreground: 222 47% 11%;
+
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 210 40% 98%;
+
+    --border: 214 32% 91%;
+    --input: 214 32% 91%;
+    --ring: 221 83% 53%;
+
+    --radius: 0.75rem;
+    
+    --severity-high: #FF3B30;
+    --severity-medium: #FF9500;
+    --severity-low: #34C759;
+  }
+
+  .dark {
+    --background: 222 47% 8%;
+    --foreground: 210 40% 98%;
+
+    --card: 222 47% 11%;
+    --card-foreground: 210 40% 98%;
+
+    --popover: 222 47% 11%;
+    --popover-foreground: 210 40% 98%;
+
+    --primary: 217 91% 60%;
+    --primary-foreground: 222 47% 11%;
+
+    --secondary: 217 33% 17%;
+    --secondary-foreground: 210 40% 98%;
+
+    --muted: 217 33% 17%;
+    --muted-foreground: 215 20% 65%;
+
+    --accent: 217 33% 17%;
+    --accent-foreground: 210 40% 98%;
+
+    --destructive: 0 63% 61%;
+    --destructive-foreground: 210 40% 98%;
+
+    --border: 217 33% 20%;
+    --input: 217 33% 20%;
+    --ring: 224 76% 60%;
+    
+    --severity-high: #FF453A;
+    --severity-medium: #FF9F0A;
+    --severity-low: #30D158;
+  }
+}
+
+@font-face {
+  font-family: 'SF Pro Display';
+  src: url('https://applesocial.s3.amazonaws.com/assets/styles/fonts/sanfrancisco/sanfranciscodisplay-regular-webfont.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'SF Pro Display';
+  src: url('https://applesocial.s3.amazonaws.com/assets/styles/fonts/sanfrancisco/sanfranciscodisplay-medium-webfont.woff2') format('woff2');
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'SF Pro Display';
+  src: url('https://applesocial.s3.amazonaws.com/assets/styles/fonts/sanfrancisco/sanfranciscodisplay-semibold-webfont.woff2') format('woff2');
+  font-weight: 600;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'SF Mono';
+  src: url('https://applesocial.s3.amazonaws.com/assets/styles/fonts/sanfrancisco/sfmono-regular-webfont.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground font-sans dark:bg-gradient-to-br dark:from-background dark:to-background/80;
+  }
+}
+
+@layer components {
+  .glass-card {
+    @apply bg-white/80 dark:bg-gray-900/50 backdrop-blur-md border border-white/20 dark:border-gray-800/30 shadow-lg;
+  }
+  
+  .threat-indicator {
+    @apply relative inline-flex;
+  }
+  
+  .threat-indicator:before {
+    @apply content-[''] absolute w-2 h-2 rounded-full animate-ping-slow;
+  }
+  
+  .threat-indicator-high:before {
+    @apply bg-red-500;
+  }
+  
+  .threat-indicator-medium:before {
+    @apply bg-orange-500;
+  }
+  
+  .threat-indicator-low:before {
+    @apply bg-green-500;
+  }
+  
+  .map-container {
+    @apply h-full w-full relative rounded-md overflow-hidden;
+  }
+  
+  .map-overlay {
+    @apply absolute bottom-0 left-0 right-0 bg-gradient-to-t from-background/90 to-transparent h-24 pointer-events-none;
+  }
+
+  .connect-button {
+    @apply relative inline-flex items-center justify-center px-6 py-3 text-sm font-medium text-white bg-primary rounded-md shadow-md overflow-hidden transition-all duration-300 ease-in-out;
+  }
+  
+  .connect-button::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+    transition: 0.5s;
+  }
+  
+  .connect-button:hover::before {
+    left: 100%;
+  }
+  
+  .blockchain-block {
+    @apply relative p-4 glass-card rounded-md;
+  }
+  
+  .blockchain-connection {
+    @apply absolute left-1/2 -translate-x-1/2 -bottom-6 w-1 h-6;
+    background: linear-gradient(to bottom, var(--primary), transparent);
+  }
+
+  .blockchain-container::after {
+    content: '';
+    @apply absolute left-1/2 -translate-x-1/2 top-4 bottom-0 w-0.5 -z-10;
+    background: linear-gradient(to bottom, var(--primary), transparent);
+  }
+
+  .alert-banner {
+    @apply flex items-center justify-between px-4 py-3 rounded-md bg-destructive/10 border border-destructive/30 text-destructive-foreground;
+    box-shadow: 0 0 15px rgba(255, 0, 0, 0.1);
+  }
+
+  .dark-nav {
+    @apply bg-background/80 dark:bg-gray-900/50 backdrop-blur-lg border-b border-border shadow-sm;
+  }
+
+  .stat-card {
+    @apply transition-all duration-300 hover:translate-y-[-2px] hover:shadow-md;
+  }
+
+  .dashboard-grid {
+    @apply grid grid-cols-1 md:grid-cols-12 gap-6;
+  }
+
+  .settings-tab {
+    @apply flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-md transition-colors;
+  }
+
+  .settings-tab.active {
+    @apply bg-primary/10 text-primary;
+  }
+
+  .settings-tab:not(.active) {
+    @apply text-muted-foreground hover:bg-accent hover:text-accent-foreground;
+  }
+  
+  @keyframes bounce-light {
+    0%, 100% {
+      transform: translateY(0);
+    }
+    50% {
+      transform: translateY(-3px);
+    }
+  }
+  
+  .animate-bounce-light {
+    animation: bounce-light 2s ease-in-out infinite;
+  }
+  
+  @keyframes pulse-subtle {
+    0%, 100% {
+      opacity: 1;
+    }
+    50% {
+      opacity: 0.7;
+    }
+  }
+  
+  .animate-pulse-subtle {
+    animation: pulse-subtle 2s ease-in-out infinite;
+  }
+  
+  @keyframes glow-pulse {
+    0% {
+      box-shadow: 0 0 5px rgba(255, 0, 0, 0.1);
+    }
+    50% {
+      box-shadow: 0 0 15px rgba(255, 0, 0, 0.2);
+    }
+    100% {
+      box-shadow: 0 0 5px rgba(255, 0, 0, 0.1);
+    }
+  }
+  
+  .animate-glow-pulse {
+    animation: glow-pulse 2s infinite;
+  }
+  
+  @keyframes slide-up {
+    from {
+      opacity: 0;
+      transform: translateY(20px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+  
+  .animate-slide-up {
+    animation: slide-up 0.5s forwards;
+  }
+  
+  @keyframes ping-slow {
+    0% {
+      transform: scale(1);
+      opacity: 0.8;
+    }
+    100% {
+      transform: scale(2);
+      opacity: 0;
+    }
+  }
+  
+  .animate-ping-slow {
+    animation: ping-slow 2s cubic-bezier(0, 0, 0.2, 1) infinite;
+  }
+}
