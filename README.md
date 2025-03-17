@@ -47,7 +47,8 @@ These URLs can be updated anytime through the settings panel in the dashboard UI
 
 ## Live Demo  
 
-Check out the project in action: [Zeroday Dashboard](https://sachinskyte.github.io/Zeroday-dashboard/)  
+Experience the Zeroday Dashboard live: [Zeroday Dashboard](https://zeroday-dashboard.vercel.app/)  
+
 
 
 ## 🤝 Contributing
