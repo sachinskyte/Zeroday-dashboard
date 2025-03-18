@@ -19,9 +19,16 @@ import { getNewHighSeverityThreats } from '@/utils/dataUtils';
 // Create and add alert.mp3 to public folder
 const ALERT_SOUND_URL = '/alert.mp3';
 
+// Define the ConnectionSettings interface
+interface ConnectionSettings {
+  apiKey: string;
+  apiUrl: string;
+  blockchainUrl: string;
+}
+
 const Index = () => {
   // Load persisted settings from localStorage with error handling
-  const [persistedSettings, setPersistedSettings] = useState(() => 
+  const [persistedSettings, setPersistedSettings] = useState<ConnectionSettings>(() => 
     getFromStorage('sentinel-connection-settings', {
       apiKey: '',
       apiUrl: '',
@@ -85,14 +92,23 @@ const Index = () => {
             setAudioError(null);
           };
           
-          const handleAudioError = (e: ErrorEvent) => {
+          const handleAudioError = (e: Event) => {
             console.error('Error loading audio:', e);
             setAudioLoaded(false);
             setAudioError('Failed to load alert sound');
           };
           
           audioRef.current.addEventListener('canplaythrough', handleAudioLoaded);
-          audioRef.current.addEventListener('error', handleAudioError as EventListener);
+          audioRef.current.addEventListener('error', handleAudioError);
+          
+          // Return cleanup function
+          return () => {
+            if (audioRef.current) {
+              audioRef.current.pause();
+              audioRef.current.removeEventListener('canplaythrough', handleAudioLoaded);
+              audioRef.current.removeEventListener('error', handleAudioError);
+            }
+          };
         }
       } catch (error) {
         console.error('Error initializing audio:', error);
@@ -100,14 +116,19 @@ const Index = () => {
       }
     }
     
-    return () => {
-      if (audioRef.current) {
-        audioRef.current.pause();
-        audioRef.current.removeEventListener('canplaythrough', () => setAudioLoaded(true));
-        audioRef.current.removeEventListener('error', () => setAudioError('Failed to load alert sound'));
-      }
-    };
+    return undefined;
   }, []);
+  
+  // Define ThreatStats interface to match what's used in useThreatData
+  interface ThreatStats {
+    totalThreats: number;
+    highSeverity: number;
+    mediumSeverity: number;
+    lowSeverity: number;
+    mitigatedThreats: number;
+    attackVectors: Record<string, number>;
+    blockchainIncidents: number;
+  }
   
   const { 
     isConnected,
@@ -130,8 +151,8 @@ const Index = () => {
   } = useThreatData(persistedSettings);
   
   const toggleSound = useCallback(() => {
-    setSoundEnabled(!soundEnabled);
-  }, [soundEnabled]);
+    setSoundEnabled(prev => !prev);
+  }, []);
   
   // Connect to sources when settings are available and connection is not active
   useEffect(() => {
@@ -147,7 +168,7 @@ const Index = () => {
   
   // Handle high severity threats for alerts
   useEffect(() => {
-    if (!threatData.length || !notificationsEnabled) return;
+    if (!threatData || !threatData.length || !notificationsEnabled) return;
     
     try {
       const highSeverityThreats = getNewHighSeverityThreats(threatData, alertHistory);
@@ -272,24 +293,24 @@ const Index = () => {
                 
                 <section className="dashboard-grid mt-6">
                   <div className="md:col-span-5 h-[500px]">
-                    <LiveAttackFeed threats={threatData} />
+                    <LiveAttackFeed threats={threatData || []} />
                   </div>
                   <div className="md:col-span-7 h-[500px]">
-                    <ThreatChart threats={threatData} />
+                    <ThreatChart threats={threatData || []} />
                   </div>
                 </section>
                 
                 <section className="dashboard-grid mt-6">
                   <div className="md:col-span-8 h-[400px]">
-                    <ThreatMap threats={threatData} />
+                    <ThreatMap threats={threatData || []} />
                   </div>
                   <div className="md:col-span-4 h-[400px]">
-                    <BlockchainViewer data={blockchainData} />
+                    <BlockchainViewer data={blockchainData || []} />
                   </div>
                 </section>
 
                 <section className="mt-6">
-                  <ThreatTrends threats={threatData} />
+                  <ThreatTrends threats={threatData || []} />
                 </section>
               </>
             )}
