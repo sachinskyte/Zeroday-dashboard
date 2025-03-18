@@ -19,68 +19,28 @@ import { getNewHighSeverityThreats } from '@/utils/dataUtils';
 // Create and add alert.mp3 to public folder
 const ALERT_SOUND_URL = '/alert.mp3';
 
-// Define the ConnectionSettings interface
-interface ConnectionSettings {
-  apiKey: string;
-  apiUrl: string;
-  blockchainUrl: string;
-}
-
-// Helper function to validate URL
-const isValidUrl = (url: string): boolean => {
-  try {
-    if (!url) return false;
-    new URL(url);
-    return true;
-  } catch {
-    return false;
-  }
-};
-
 const Index = () => {
   // Load persisted settings from localStorage with error handling
-  const [persistedSettings, setPersistedSettings] = useState<ConnectionSettings>(() => {
-    try {
-      const settings = getFromStorage('sentinel-connection-settings', {
-        apiKey: '',
-        apiUrl: '',
-        blockchainUrl: '',
-      });
-      return settings;
-    } catch (error) {
-      console.error('Error loading connection settings:', error);
-      return { apiKey: '', apiUrl: '', blockchainUrl: '' };
-    }
-  });
+  const [persistedSettings, setPersistedSettings] = useState(() => 
+    getFromStorage('sentinel-connection-settings', {
+      apiKey: '',
+      apiUrl: '',
+      blockchainUrl: '',
+    })
+  );
   
   // Fix the type error - converting string to boolean properly
-  const [soundEnabled, setSoundEnabled] = useState(() => {
-    try {
-      return getFromStorage('sentinel-sound-enabled', 'false') === 'true';
-    } catch (error) {
-      console.error('Error loading sound settings:', error);
-      return false;
-    }
-  });
+  const [soundEnabled, setSoundEnabled] = useState(() => 
+    getFromStorage('sentinel-sound-enabled', 'false') === 'true'
+  );
   
-  const [notificationsEnabled, setNotificationsEnabled] = useState(() => {
-    try {
-      return getFromStorage('sentinel-notifications-enabled', 'true') === 'true';
-    } catch (error) {
-      console.error('Error loading notification settings:', error);
-      return true;
-    }
-  });
+  const [notificationsEnabled, setNotificationsEnabled] = useState(() => 
+    getFromStorage('sentinel-notifications-enabled', 'true') === 'true'
+  );
   
   const [soundVolume, setSoundVolume] = useState(() => {
-    try {
-      const volume = getFromStorage('sentinel-sound-volume', '70');
-      const parsedVolume = parseInt(volume, 10);
-      return isNaN(parsedVolume) ? 70 : parsedVolume;
-    } catch (error) {
-      console.error('Error loading volume settings:', error);
-      return 70;
-    }
+    const volume = getFromStorage('sentinel-sound-volume', '70');
+    return parseInt(volume, 10);
   });
   
   const [currentAlert, setCurrentAlert] = useState<ThreatData | null>(null);
@@ -88,15 +48,10 @@ const Index = () => {
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const [audioLoaded, setAudioLoaded] = useState(false);
   const [audioError, setAudioError] = useState<string | null>(null);
-  const [localConnectionError, setLocalConnectionError] = useState<string | null>(null);
   
   // Safely persist settings to localStorage
   const safelyPersistToStorage = useCallback((key: string, value: any) => {
-    try {
-      saveToStorage(key, value);
-    } catch (error) {
-      console.error(`Error saving ${key} to storage:`, error);
-    }
+    saveToStorage(key, value);
   }, []);
   
   // Store settings in localStorage when they change
@@ -118,92 +73,65 @@ const Index = () => {
 
   // Improved audio loading with better error handling
   useEffect(() => {
-    let audioElement: HTMLAudioElement | null = null;
-    
-    try {
-      if (!audioRef.current) {
+    if (!audioRef.current) {
+      try {
         // Create audio element and set its properties
-        audioElement = initializeAudio(ALERT_SOUND_URL);
-        audioRef.current = audioElement;
+        audioRef.current = initializeAudio(ALERT_SOUND_URL);
         
-        if (audioElement) {
+        if (audioRef.current) {
           const handleAudioLoaded = () => {
             console.log('Audio loaded successfully');
             setAudioLoaded(true);
             setAudioError(null);
           };
           
-          const handleAudioError = () => {
-            console.error('Error loading audio');
+          const handleAudioError = (e: ErrorEvent) => {
+            console.error('Error loading audio:', e);
             setAudioLoaded(false);
             setAudioError('Failed to load alert sound');
           };
           
-          audioElement.addEventListener('canplaythrough', handleAudioLoaded);
-          audioElement.addEventListener('error', handleAudioError);
+          audioRef.current.addEventListener('canplaythrough', handleAudioLoaded);
+          audioRef.current.addEventListener('error', handleAudioError as EventListener);
         }
+      } catch (error) {
+        console.error('Error initializing audio:', error);
+        setAudioError('Failed to initialize audio');
       }
-    } catch (error) {
-      console.error('Error initializing audio:', error);
-      setAudioError('Failed to initialize audio');
     }
     
     return () => {
-      if (audioElement) {
-        try {
-          audioElement.pause();
-          audioElement.removeEventListener('canplaythrough', () => {});
-          audioElement.removeEventListener('error', () => {});
-        } catch (error) {
-          console.error('Error cleaning up audio:', error);
-        }
+      if (audioRef.current) {
+        audioRef.current.pause();
+        audioRef.current.removeEventListener('canplaythrough', () => setAudioLoaded(true));
+        audioRef.current.removeEventListener('error', () => setAudioError('Failed to load alert sound'));
       }
     };
   }, []);
   
-  // Define ThreatStats interface to match what's used in useThreatData
-  interface ThreatStats {
-    totalThreats: number;
-    highSeverity: number;
-    mediumSeverity: number;
-    lowSeverity: number;
-    mitigatedThreats: number;
-    attackVectors: Record<string, number>;
-    blockchainIncidents: number;
-  }
-  
-  // Provide default values for all hook returns
   const { 
-    isConnected = false,
-    isLoading = false,
-    error = null,
-    connectionError = null,
-    lastUpdated = null,
-    threatData = [],
-    blockchainData = [],
-    threatStats = {
-      totalThreats: 0,
-      highSeverity: 0,
-      mediumSeverity: 0,
-      lowSeverity: 0,
-      mitigatedThreats: 0,
-      attackVectors: {},
-      blockchainIncidents: 0
-    },
-    reconnectAttempts = 0,
-    isReconnecting = false,
-    usingFallbackData = false,
-    apiConnected = false,
-    blockchainConnected = false,
-    connectToSources = () => {},
-    disconnect = () => {},
-    fetchThreatData = () => Promise.resolve(),
-    fetchBlockchainData = () => Promise.resolve()
-  } = useThreatData(persistedSettings) || {};
+    isConnected,
+    isLoading,
+    error,
+    connectionError,
+    lastUpdated,
+    threatData,
+    blockchainData,
+    threatStats,
+    reconnectAttempts,
+    isReconnecting,
+    usingFallbackData,
+    apiConnected,
+    blockchainConnected,
+    connectToSources,
+    disconnect,
+    fetchThreatData,
+    fetchBlockchainData
+  } = useThreatData(persistedSettings);
   
   const toggleSound = useCallback(() => {
-    setSoundEnabled(prev => !prev);
-  }, []);
+    setSoundEnabled(!soundEnabled);
+  }, [soundEnabled]);
   
   // Connect to sources when settings are available and connection is not active
   useEffect(() => {
@@ -213,14 +141,13 @@ const Index = () => {
         connectToSources();
       } catch (error) {
         console.error('Error connecting to sources:', error);
-        setLocalConnectionError('Failed to connect to sources. Please check your settings and try again.');
       }
     }
   }, [persistedSettings, isConnected, isLoading, isReconnecting, connectToSources]);
   
   // Handle high severity threats for alerts
   useEffect(() => {
-    if (!threatData || threatData.length === 0 || !notificationsEnabled) return;
+    if (!threatData.length || !notificationsEnabled) return;
     
     try {
       const highSeverityThreats = getNewHighSeverityThreats(threatData, alertHistory);
@@ -244,19 +171,6 @@ const Index = () => {
   // Safely validate URLs and connect
   const handleConnect = useCallback((apiKey: string, apiUrl: string, blockchainUrl: string) => {
     try {
-      setLocalConnectionError(null);
-      
-      // Validate URLs
-      if (!isValidUrl(apiUrl)) {
-        setLocalConnectionError("Invalid API URL format. Please provide a valid URL.");
-        return;
-      }
-      
-      if (!isValidUrl(blockchainUrl)) {
-        setLocalConnectionError("Invalid Blockchain URL format. Please provide a valid URL.");
-        return;
-      }
-      
       // Store the new settings
       const newSettings = { apiKey, apiUrl, blockchainUrl };
       setPersistedSettings(newSettings);
@@ -265,30 +179,18 @@ const Index = () => {
       connectToSources();
     } catch (err) {
       console.error("Error in handleConnect:", err);
-      setLocalConnectionError("Failed to connect. Please check your settings and try again.");
     }
   }, [connectToSources]);
   
   const handleDisconnect = useCallback(() => {
-    try {
-      disconnect();
-    } catch (error) {
-      console.error('Error disconnecting:', error);
-    }
+    disconnect();
   }, [disconnect]);
   
   const handleReset = useCallback(() => {
-    try {
-      const newSettings = { apiKey: '', apiUrl: '', blockchainUrl: '' };
-      setPersistedSettings(newSettings);
-      disconnect();
-    } catch (error) {
-      console.error('Error resetting settings:', error);
-    }
+    const newSettings = { apiKey: '', apiUrl: '', blockchainUrl: '' };
+    setPersistedSettings(newSettings);
+    disconnect();
   }, [disconnect]);
-  
-  // Combine local and hook connection errors
-  const displayConnectionError = localConnectionError || connectionError;
   
   return (
     <ThemeProvider defaultTheme="dark">
@@ -306,7 +208,7 @@ const Index = () => {
           setNotificationsEnabled={setNotificationsEnabled}
           soundVolume={soundVolume}
           setSoundVolume={setSoundVolume}
-          connectionError={displayConnectionError}
+          connectionError={connectionError}
         />
         
         <main className="container mx-auto pt-24 pb-16 px-4 sm:px-6">
@@ -344,23 +246,15 @@ const Index = () => {
                     Connect to your threat intelligence API and blockchain ledger to view 
                     real-time security insights and threat data.
                   </p>
-                  {displayConnectionError && (
+                  {connectionError && (
                     <div className="text-red-500 p-4 bg-red-500/10 rounded-lg text-sm">
                       <AlertOctagon className="h-4 w-4 inline-block mr-2" />
-                      {displayConnectionError}
+                      {connectionError}
                     </div>
                   )}
                   <div className="flex justify-center">
                     <button 
-                      onClick={() => {
-                        const settingsTrigger = document.getElementById('settings-trigger');
-                        if (settingsTrigger) {
-                          settingsTrigger.click();
-                        } else {
-                          console.error('Settings trigger element not found');
-                          setLocalConnectionError('Unable to open settings. Please refresh the page.');
-                        }
-                      }}
+                      onClick={() => document.getElementById('settings-trigger')?.click()}
                       className="connect-button group"
                     >
                       Configure Connection
@@ -370,32 +264,69 @@ const Index = () => {
               </div>
             ) : (
               <>
-                <section className="dashboard-grid">
-                  <div className="md:col-span-12">
+                <section className="grid gap-6 mb-6">
+                  <div className="w-full">
                     <ThreatStats {...threatStats} />
                   </div>
                 </section>
                 
-                <section className="dashboard-grid mt-6">
-                  <div className="md:col-span-5 h-[500px]">
-                    <LiveAttackFeed threats={threatData} />
+                <section className="grid grid-cols-1 md:grid-cols-12 gap-6 mb-6">
+                  <div className="md:col-span-5 h-auto">
+                    <div className="bg-background/60 backdrop-blur-sm border border-border/50 rounded-lg shadow-md h-full overflow-hidden">
+                      <div className="flex flex-col h-full max-h-[500px]">
+                        <div className="p-4 border-b border-border/50">
+                          <h2 className="text-lg font-medium">Live Attack Feed</h2>
+                        </div>
+                        <div className="flex-grow overflow-auto p-0">
+                          <LiveAttackFeed threats={threatData} />
+                        </div>
+                      </div>
+                    </div>
                   </div>
                   <div className="md:col-span-7 h-[500px]">
-                    <ThreatChart threats={threatData} />
+                    <div className="bg-background/60 backdrop-blur-sm border border-border/50 rounded-lg shadow-md h-full overflow-hidden">
+                      <div className="p-4 border-b border-border/50">
+                        <h2 className="text-lg font-medium">Threat Analysis</h2>
+                      </div>
+                      <div className="p-4 h-[calc(100%-61px)]">
+                        <ThreatChart threats={threatData} />
+                      </div>
+                    </div>
                   </div>
                 </section>
                 
-                <section className="dashboard-grid mt-6">
+                <section className="grid grid-cols-1 md:grid-cols-12 gap-6 mb-6">
                   <div className="md:col-span-8 h-[400px]">
-                    <ThreatMap threats={threatData} />
+                    <div className="bg-background/60 backdrop-blur-sm border border-border/50 rounded-lg shadow-md h-full overflow-hidden">
+                      <div className="p-4 border-b border-border/50">
+                        <h2 className="text-lg font-medium">Global Threat Map</h2>
+                      </div>
+                      <div className="h-[calc(100%-61px)]">
+                        <ThreatMap threats={threatData} />
+                      </div>
+                    </div>
                   </div>
                   <div className="md:col-span-4 h-[400px]">
-                    <BlockchainViewer data={blockchainData} />
+                    <div className="bg-background/60 backdrop-blur-sm border border-border/50 rounded-lg shadow-md h-full overflow-hidden">
+                      <div className="p-4 border-b border-border/50">
+                        <h2 className="text-lg font-medium">Blockchain Ledger</h2>
+                      </div>
+                      <div className="h-[calc(100%-61px)] overflow-auto">
+                        <BlockchainViewer data={blockchainData} />
+                      </div>
+                    </div>
                   </div>
                 </section>
 
-                <section className="mt-6">
-                  <ThreatTrends threats={threatData} />
+                <section className="mb-6">
+                  <div className="bg-background/60 backdrop-blur-sm border border-border/50 rounded-lg shadow-md">
+                    <div className="p-4 border-b border-border/50">
+                      <h2 className="text-lg font-medium">Threat Trends</h2>
+                    </div>
+                    <div className="p-4">
+                      <ThreatTrends threats={threatData} />
+                    </div>
+                  </div>
                 </section>
               </>
             )}

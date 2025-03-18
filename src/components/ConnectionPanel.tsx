@@ -1,10 +1,9 @@
-
 import { useState, useEffect } from 'react';
 import { Loader2, LockKeyhole, Link2 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { useToast } from '@/hooks/use-toast';
+import { useToast } from '@/components/ui/use-toast';
 
 interface ConnectionPanelProps {
   onConnect: (apiKey: string, apiUrl: string, blockchainUrl: string) => void;
@@ -143,7 +142,7 @@ const ConnectionPanel = ({ onConnect, isLoading, isConnected, initialValues }: C
           <Button 
             className="connect-button ml-auto"
             onClick={handleConnect}
-            disabled={isLoading || (!apiUrl && !blockchainUrl)}
+            disabled={isLoading || (!apiUrl || !blockchainUrl)}
           >
             {isLoading ? (
               <>
