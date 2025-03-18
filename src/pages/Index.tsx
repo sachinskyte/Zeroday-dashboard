@@ -89,6 +89,8 @@ const Index = () => {
     reconnectAttempts,
     isReconnecting,
     usingFallbackData,
+    threatApiConnected,
+    blockchainApiConnected,
     connectToSources,
     disconnect,
     fetchThreatData,
@@ -189,6 +191,9 @@ const Index = () => {
                 isReconnecting={isReconnecting}
                 reconnectAttempts={reconnectAttempts} 
                 usingFallbackData={usingFallbackData}
+                connectionError={connectionError}
+                threatApiConnected={threatApiConnected}
+                blockchainApiConnected={blockchainApiConnected}
               />
             </div>
           )}
