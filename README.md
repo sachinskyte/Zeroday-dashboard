@@ -1,68 +1,83 @@
 
-# Sentinel - Cybersecurity Monitoring Dashboard
+# Sentinel Security Dashboard
 
-Sentinel is a real-time cybersecurity monitoring dashboard that provides visualization and tracking of security threats and blockchain-verified security events.
+This web application provides a comprehensive cybersecurity monitoring dashboard that displays real-time threat intelligence data and blockchain security ledger information. The dashboard is designed to help security professionals monitor and respond to cyber threats efficiently.
 
 ## Features
 
-- **Real-time Threat Monitoring**: View and track security threats as they occur
-- **Blockchain Verification**: Immutable record of security events stored on blockchain
-- **Interactive Visualization**: Maps, charts, and statistics for better threat analysis
-- **Customizable Settings**: Configure connections, notifications, and display preferences
-- **Graceful Degradation**: Continues to function with partial connectivity or fallback data
+- **Real-time Threat Monitoring**: View active threats as they occur
+- **Blockchain Security Ledger**: Monitor blockchain-based security records
+- **Threat Statistics**: View aggregated threat statistics by severity
+- **Interactive Threat Map**: Visualize threat origins geographically
+- **Attack Timeline**: Track threat patterns over time
+- **High-severity Alerts**: Get immediate notifications for critical threats
+- **Sound Alerts**: Optional audio notifications for critical events
+- **Dark/Light Mode**: UI theme options for different environments
 
-## Components
+## Dashboard Components
 
-The application is organized into feature-based modules:
+1. **Connection Status Panel**: Shows connection status to both the Threat API and Blockchain API
+2. **Threat Statistics**: Summary of total threats categorized by severity level
+3. **Live Attack Feed**: Real-time feed of incoming threats
+4. **Threat Chart**: Visualization of threat patterns over time
+5. **Threat Map**: Geographic visualization of attack origins
+6. **Blockchain Viewer**: View of the blockchain security ledger
+7. **Threat Trends**: Analysis of threat patterns and trends
 
-- **Alerts**: Real-time notification system for high-severity threats
-- **Blockchain**: Immutable ledger of security events with blockchain verification
-- **Charts**: Visual representation of threat data and trends
-- **Feeds**: Live attack monitoring and event feeds
-- **Maps**: Geographic visualization of attack origins
-- **Settings**: Connection configuration and application preferences
-- **Stats**: Summary statistics of security events and threats
+## Setup and Configuration
 
-## Connection Settings
+The dashboard connects to two main data sources:
+- **Threat Intelligence API**: Provides real-time threat data
+- **Blockchain Ledger API**: Provides blockchain-based security records
 
-The dashboard connects to two primary data sources:
-1. **Threat API**: Provides real-time security event data
-2. **Blockchain API**: Stores immutable records of security events
-
-You can configure these connections in the settings panel. The system provides detailed connection status information, including:
-
-- Which specific API endpoint is experiencing connectivity issues
-- Connection attempts and status
-- When data was last updated
-- Whether fallback demo data is being used
+To configure the dashboard:
+1. Click the Settings icon in the top left
+2. Enter your API endpoints in the Connection Settings tab
+3. Optionally configure notification settings in the General tab
+4. Click Connect to establish connections to the data sources
 
 ## Error Handling
 
-Sentinel includes robust error handling to ensure the application continues functioning even when connectivity issues occur:
+The dashboard implements robust error handling to ensure usability even when connections fail:
+- Connection Status indicators show which API (Threat or Blockchain) is disconnected
+- Detailed error messages are displayed when connection attempts fail
+- The application continues to function with partial data if only one API is available
+- Reconnection attempts are automatically made when connections are lost
 
-- Clearly indicates which specific API (Threat or Blockchain) is experiencing connectivity issues
-- Automatically attempts to reconnect with exponential backoff
-- Uses fallback/demo data when real connections fail
-- Provides detailed error messages to help diagnose connection problems
+## Project Structure
 
-## Getting Started
+The project is organized into feature-based folders for better maintainability:
 
-1. Open the application in your browser
-2. Click the settings icon in the top-left corner
-3. Configure your connection settings with your API endpoints
-4. Connect to begin monitoring security threats in real-time
+- **/features**: Core functionality organized by feature
+  - **/blockchain**: Blockchain ledger components
+  - **/feeds**: Real-time data feed components
+  - **/settings**: Configuration and settings components
+  - **/stats**: Statistical visualization components
+- **/components**: Reusable UI components
+  - **/ui**: Shadcn UI component library
+  - **/charts**: Data visualization components
+  - **/maps**: Geographic visualization components
+  - **/alerts**: Notification components
+- **/hooks**: React hooks for data fetching and state management
+- **/utils**: Utility functions for data processing and other operations
+- **/pages**: Application pages and routes
 
-## Usage Tips
+## Technologies Used
 
-- Enable sound notifications for high-severity threats
-- Use the blockchain ledger to verify the authenticity of security events
-- Monitor trends over time using the threat charts and statistics
-- Check geographic attack patterns on the threat map
+- React for the user interface
+- Tailwind CSS for styling
+- Shadcn UI for component library
+- Recharts for data visualization
+- Lucide React for icons
+- Tanstack Query for data fetching
+- date-fns for date formatting
 
-## Troubleshooting
+## Best Practices
 
-If you experience connection issues:
-- Check your network connectivity
-- Verify API endpoint URLs are correct
-- Look at the connection status panel for specific error information
-- The dashboard will continue to function with partial connectivity (only one API connected)
+This project follows modern React best practices:
+- Component-based architecture
+- Custom hooks for logic separation
+- Responsive design for all screen sizes
+- Graceful error handling
+- Persistent user settings
+- Accessibility considerations

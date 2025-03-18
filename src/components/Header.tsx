@@ -1,8 +1,9 @@
 
-import { useState, useEffect } from 'react';
-import { Shield } from 'lucide-react';
-import { SettingsPanel } from './settings/SettingsPanel';
-import { Button } from "@/components/ui/button";
+import { useState } from 'react';
+import { Dialog, DialogContent, DialogTrigger } from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
+import { SettingsPanel } from '@/features/settings/SettingsPanel';
+import { AlertTriangle, Bell, BellOff, Settings, Shield, Volume2, VolumeX } from 'lucide-react';
 
 interface HeaderProps {
   isConnected: boolean;
@@ -11,24 +12,24 @@ interface HeaderProps {
     apiUrl: string;
     blockchainUrl: string;
   };
+  onConnect: (apiKey: string, apiUrl: string, blockchainUrl: string) => void;
   onDisconnect: () => void;
   onReset: () => void;
-  onConnect: (apiKey: string, apiUrl: string, blockchainUrl: string) => void;
   soundEnabled: boolean;
   setSoundEnabled: (enabled: boolean) => void;
   notificationsEnabled: boolean;
   setNotificationsEnabled: (enabled: boolean) => void;
   soundVolume: number;
   setSoundVolume: (volume: number) => void;
-  connectionError?: string | null;
+  connectionError: string | null;
 }
 
 const Header = ({
   isConnected,
   connectionSettings,
+  onConnect,
   onDisconnect,
   onReset,
-  onConnect,
   soundEnabled,
   setSoundEnabled,
   notificationsEnabled,
@@ -37,53 +38,72 @@ const Header = ({
   setSoundVolume,
   connectionError
 }: HeaderProps) => {
-  const [currentTime, setCurrentTime] = useState(new Date());
-  
-  // Update current time every second
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setCurrentTime(new Date());
-    }, 1000);
-    
-    return () => clearInterval(interval);
-  }, []);
+  const [settingsOpen, setSettingsOpen] = useState(false);
   
   return (
-    <header className="fixed top-0 left-0 right-0 z-10 dark-nav">
-      <div className="container mx-auto px-4 sm:px-6 flex items-center justify-between h-16">
-        <div className="flex items-center">
-          <Shield className="h-6 w-6 text-primary mr-2" />
-          <h1 className="text-lg font-medium">Sentinel</h1>
+    <header className="fixed top-0 left-0 right-0 dark-nav z-50">
+      <div className="container mx-auto px-4 h-16 flex items-center justify-between">
+        <div className="flex items-center space-x-2">
+          <Shield className="h-6 w-6 text-primary" />
+          <h1 className="text-xl font-semibold">Sentinel</h1>
+          
+          {isConnected && (
+            <span className="ml-2 text-xs px-2 py-0.5 bg-green-500/20 text-green-500 rounded-full">
+              Connected
+            </span>
+          )}
         </div>
         
-        <div className="flex items-center space-x-4">
-          <div className="hidden md:block text-sm text-muted-foreground">
-            {currentTime.toLocaleTimeString(undefined, { 
-              hour: '2-digit', 
-              minute: '2-digit', 
-              second: '2-digit',
-              hour12: false
-            })}
-          </div>
+        <div className="flex items-center space-x-2">
+          <Button
+            variant="ghost"
+            size="icon"
+            title={soundEnabled ? "Mute sounds" : "Enable sounds"}
+            onClick={() => setSoundEnabled(!soundEnabled)}
+          >
+            {soundEnabled ? <Volume2 className="h-5 w-5" /> : <VolumeX className="h-5 w-5 text-muted-foreground" />}
+          </Button>
+          
+          <Button
+            variant="ghost"
+            size="icon"
+            title={notificationsEnabled ? "Disable notifications" : "Enable notifications"}
+            onClick={() => setNotificationsEnabled(!notificationsEnabled)}
+          >
+            {notificationsEnabled ? <Bell className="h-5 w-5" /> : <BellOff className="h-5 w-5 text-muted-foreground" />}
+          </Button>
+          
+          <Dialog open={settingsOpen} onOpenChange={setSettingsOpen}>
+            <DialogTrigger asChild>
+              <Button 
+                id="settings-trigger"
+                variant={connectionError ? "destructive" : "outline"} 
+                size="sm"
+                className="flex items-center"
+              >
+                {connectionError && <AlertTriangle className="h-4 w-4 mr-2" />}
+                <Settings className="h-4 w-4 mr-2" />
+                Settings
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
+              <SettingsPanel
+                connectionSettings={connectionSettings}
+                isConnected={isConnected}
+                onConnect={onConnect}
+                onDisconnect={onDisconnect}
+                onReset={onReset}
+                soundEnabled={soundEnabled}
+                setSoundEnabled={setSoundEnabled}
+                notificationsEnabled={notificationsEnabled}
+                setNotificationsEnabled={setNotificationsEnabled}
+                soundVolume={soundVolume}
+                setSoundVolume={setSoundVolume}
+                connectionError={connectionError}
+              />
+            </DialogContent>
+          </Dialog>
         </div>
-      </div>
-      
-      {/* Settings panel moved outside the header for better positioning */}
-      <div id="settings-trigger">
-        <SettingsPanel 
-          connectionSettings={connectionSettings}
-          isConnected={isConnected}
-          onDisconnect={onDisconnect}
-          onReset={onReset}
-          onConnect={onConnect}
-          soundEnabled={soundEnabled}
-          setSoundEnabled={setSoundEnabled}
-          notificationsEnabled={notificationsEnabled}
-          setNotificationsEnabled={setNotificationsEnabled}
-          soundVolume={soundVolume}
-          setSoundVolume={setSoundVolume}
-          connectionError={connectionError}
-        />
       </div>
     </header>
   );

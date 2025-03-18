@@ -150,8 +150,10 @@ export const useThreatData = ({ apiKey, apiUrl, blockchainUrl }: useThreatDataPr
   const [isReconnecting, setIsReconnecting] = useState(false);
   const [lastSuccessfulFetch, setLastSuccessfulFetch] = useState<Date | null>(null);
   const [usingFallbackData, setUsingFallbackData] = useState(false);
-  const [threatApiConnected, setThreatApiConnected] = useState(true);
-  const [blockchainApiConnected, setBlockchainApiConnected] = useState(true);
+  
+  // Track individual API connection statuses
+  const [apiConnected, setApiConnected] = useState(false);
+  const [blockchainConnected, setBlockchainConnected] = useState(false);
   
   const intervalRef = useRef<number | null>(null);
   const reconnectTimeoutRef = useRef<number | null>(null);
@@ -227,19 +229,13 @@ export const useThreatData = ({ apiKey, apiUrl, blockchainUrl }: useThreatDataPr
       setLastUpdated(new Date());
       setLastSuccessfulFetch(new Date());
       setUsingFallbackData(false);
-      setThreatApiConnected(true);
+      setApiConnected(true);
       
       // Reset reconnect state on successful fetch
       if (isReconnecting) {
         setIsReconnecting(false);
         setReconnectAttempts(0);
         toast.success('Reconnected to threat data source');
-      }
-      
-      // If we weren't connected before, set connected now
-      if (!isConnected) {
-        setIsConnected(true);
-        setConnectionError(null);
       }
       
       // Return new threats for notification purposes
@@ -249,7 +245,7 @@ export const useThreatData = ({ apiKey, apiUrl, blockchainUrl }: useThreatDataPr
       if (err instanceof Error && err.name !== 'AbortError') {
         console.error("Error fetching threat data:", err.message);
         setError(err.message);
-        setThreatApiConnected(false);
+        setApiConnected(false);
         
         if (isConnected && !isReconnecting) {
           setIsReconnecting(true);
@@ -289,13 +285,7 @@ export const useThreatData = ({ apiKey, apiUrl, blockchainUrl }: useThreatDataPr
         throw new Error(`Blockchain request failed with status ${response.status}`);
       }
       
-      let data;
-      try {
-        data = await response.json();
-      } catch (e) {
-        console.error("Error parsing blockchain response as JSON:", e);
-        throw new Error("Invalid JSON response from blockchain API");
-      }
+      const data = await response.json();
       
       // Validate blockchain data structure
       if (!data || !data.chain || !Array.isArray(data.chain)) {
@@ -307,14 +297,14 @@ export const useThreatData = ({ apiKey, apiUrl, blockchainUrl }: useThreatDataPr
       setLastUpdated(new Date());
       setLastSuccessfulFetch(new Date());
       setUsingFallbackData(false);
-      setBlockchainApiConnected(true);
+      setBlockchainConnected(true);
       
       return { success: true };
     } catch (err) {
       if (err instanceof Error) {
         console.error("Error fetching blockchain data:", err.message);
         setError(err.message);
-        setBlockchainApiConnected(false);
+        setBlockchainConnected(false);
         
         if (isConnected && !isReconnecting) {
           setIsReconnecting(true);
@@ -374,6 +364,8 @@ export const useThreatData = ({ apiKey, apiUrl, blockchainUrl }: useThreatDataPr
     }
     
     setIsConnected(false);
+    setApiConnected(false);
+    setBlockchainConnected(false);
     setIsReconnecting(false);
     setReconnectAttempts(0);
     toast.info('Disconnected from data sources');
@@ -383,8 +375,6 @@ export const useThreatData = ({ apiKey, apiUrl, blockchainUrl }: useThreatDataPr
     setIsLoading(true);
     setError(null);
     setConnectionError(null);
-    setThreatApiConnected(true);
-    setBlockchainApiConnected(true);
     
     // Validate URLs before attempting connection
     try {
@@ -409,63 +399,42 @@ export const useThreatData = ({ apiKey, apiUrl, blockchainUrl }: useThreatDataPr
     }
     
     try {
-      // We'll track which APIs are connected
-      let threatApiResult = { success: false };
-      let blockchainApiResult = { success: false };
+      const threatResult = await fetchThreatData();
+      const blockchainResult = await fetchBlockchainData();
       
-      // Try to connect to threat API
-      if (apiUrl) {
-        try {
-          threatApiResult = await fetchThreatData();
-          setThreatApiConnected(threatApiResult.success);
-        } catch (e) {
-          console.error("Error connecting to threat API:", e);
-          setThreatApiConnected(false);
-        }
-      }
+      // Update connection flags based on results
+      const apiSuccess = threatResult.success;
+      const blockchainSuccess = blockchainResult.success;
       
-      // Try to connect to blockchain API
-      if (blockchainUrl) {
-        try {
-          blockchainApiResult = await fetchBlockchainData();
-          setBlockchainApiConnected(blockchainApiResult.success);
-        } catch (e) {
-          console.error("Error connecting to blockchain API:", e);
-          setBlockchainApiConnected(false);
-        }
-      }
+      // Set overall connection status (connected if at least one service is available)
+      const anyConnected = apiSuccess || blockchainSuccess;
+      setIsConnected(anyConnected);
       
-      // Check if at least one API connected
-      const atLeastOneConnected = threatApiResult.success || blockchainApiResult.success;
-      
-      if (atLeastOneConnected) {
-        setIsConnected(true);
+      if (anyConnected) {
         setIsReconnecting(false);
         setReconnectAttempts(0);
         
-        if (threatApiResult.success && blockchainApiResult.success) {
+        // Show appropriate toast based on what connected
+        if (apiSuccess && blockchainSuccess) {
           toast.success('Successfully connected to all data sources');
-        } else {
-          // Partial connection - build specific error message
-          const errorMsg = [];
-          if (!threatApiResult.success) errorMsg.push("Threat API");
-          if (!blockchainApiResult.success) errorMsg.push("Blockchain API");
-          
-          const errorPrefix = errorMsg.length === 1 ? "Failed to connect to " : "Failed to connect to multiple APIs: ";
-          setConnectionError(errorPrefix + errorMsg.join(", "));
-          toast.warning('Partial connection established. Some data sources unavailable.');
+        } else if (apiSuccess) {
+          toast.success('Connected to threat API only');
+          setConnectionError("Blockchain connection failed. Using sample blockchain data.");
+        } else if (blockchainSuccess) {
+          toast.success('Connected to blockchain only');
+          setConnectionError("Threat API connection failed. Using sample threat data.");
         }
         
-        // Set up polling every 5 seconds for connected APIs
+        // Set up polling every 5 seconds (reduced from 10 for more real-time updates)
         intervalRef.current = window.setInterval(() => {
-          if (threatApiConnected) fetchThreatData();
-          if (blockchainApiConnected) fetchBlockchainData();
+          fetchThreatData();
+          fetchBlockchainData();
         }, 5000);
       } else {
-        setConnectionError("Failed to connect to data sources. Check network and URLs.");
+        setConnectionError("Failed to connect to both data sources. Check network and URLs.");
         toast.error('Failed to connect to all data sources');
         
-        // Use fallback data for demo purposes
+        // Use fallback data for demo purposes if nothing connected
         if (threatData.length === 0) {
           setThreatData(FALLBACK_THREATS);
           setUsingFallbackData(true);
@@ -475,17 +444,14 @@ export const useThreatData = ({ apiKey, apiUrl, blockchainUrl }: useThreatDataPr
           setBlockchainData(FALLBACK_BLOCKCHAIN);
           setUsingFallbackData(true);
         }
-        
-        // Even though we're using fallback data, we're still technically not connected
-        setIsConnected(false);
       }
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Connection failed';
       setConnectionError(errorMessage);
       setError(errorMessage);
       setIsConnected(false);
-      setThreatApiConnected(false);
-      setBlockchainApiConnected(false);
+      setApiConnected(false);
+      setBlockchainConnected(false);
       toast.error('Failed to connect to data sources');
       
       // Use fallback data
@@ -501,7 +467,7 @@ export const useThreatData = ({ apiKey, apiUrl, blockchainUrl }: useThreatDataPr
     } finally {
       setIsLoading(false);
     }
-  }, [fetchThreatData, fetchBlockchainData, apiUrl, blockchainUrl, threatData.length, blockchainData, threatApiConnected, blockchainApiConnected]);
+  }, [fetchThreatData, fetchBlockchainData, apiUrl, blockchainUrl, threatData.length, blockchainData]);
   
   // Clean up on unmount
   useEffect(() => {
@@ -560,8 +526,8 @@ export const useThreatData = ({ apiKey, apiUrl, blockchainUrl }: useThreatDataPr
     reconnectAttempts,
     isReconnecting,
     usingFallbackData,
-    threatApiConnected,
-    blockchainApiConnected,
+    apiConnected,
+    blockchainConnected,
     connectToSources,
     disconnect,
     fetchThreatData,

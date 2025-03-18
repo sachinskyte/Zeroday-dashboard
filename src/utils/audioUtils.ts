@@ -1,135 +1,75 @@
 
-export interface AudioManagerOptions {
-  soundEnabled: boolean; 
-  soundVolume: number;
-}
+/**
+ * Utility functions for handling audio in the application
+ */
 
-class AudioManager {
-  private audioElements: Map<string, HTMLAudioElement> = new Map();
-  private loaded: Map<string, boolean> = new Map();
-  private errors: Map<string, string> = new Map();
-  
-  loadAudio(id: string, url: string): Promise<void> {
-    return new Promise((resolve, reject) => {
-      if (this.audioElements.has(id)) {
-        resolve();
-        return;
-      }
-      
-      try {
-        const audio = new Audio(url);
-        audio.preload = 'auto';
-        
-        const handleLoaded = () => {
-          this.loaded.set(id, true);
-          this.errors.delete(id);
-          console.log(`Audio loaded: ${id}`);
-          resolve();
-        };
-        
-        const handleError = (e: ErrorEvent) => {
-          this.loaded.set(id, false);
-          this.errors.set(id, `Failed to load audio: ${e.message || 'Unknown error'}`);
-          console.error(`Error loading audio ${id}:`, e);
-          reject(new Error(`Failed to load audio: ${e.message || 'Unknown error'}`));
-        };
-        
-        audio.addEventListener('canplaythrough', handleLoaded);
-        audio.addEventListener('error', handleError as EventListener);
-        
-        audio.load();
-        this.audioElements.set(id, audio);
-      } catch (error) {
-        const message = error instanceof Error ? error.message : 'Unknown error';
-        this.errors.set(id, `Failed to initialize audio: ${message}`);
-        console.error(`Error initializing audio ${id}:`, error);
-        reject(error);
-      }
-    });
-  }
-  
-  isLoaded(id: string): boolean {
-    return this.loaded.get(id) || false;
-  }
-  
-  getError(id: string): string | null {
-    return this.errors.get(id) || null;
-  }
-  
-  play(id: string, options: AudioManagerOptions): Promise<void> {
-    return new Promise((resolve, reject) => {
-      const audio = this.audioElements.get(id);
-      
-      if (!audio) {
-        reject(new Error(`Audio not loaded: ${id}`));
-        return;
-      }
-      
-      if (!options.soundEnabled) {
-        resolve();
-        return;
-      }
-      
-      try {
-        audio.volume = options.soundVolume / 100;
-        audio.currentTime = 0;
-        
-        audio.play().then(() => {
-          resolve();
-        }).catch(err => {
-          console.error(`Error playing audio ${id}:`, err);
-          
-          // Handle autoplay restrictions
-          if (err.name === 'NotAllowedError') {
-            console.warn('Audio playback was blocked by the browser. User interaction required.');
-            this.errors.set(id, 'Playback blocked by browser, user interaction required');
-          }
-          
-          reject(err);
-        });
-      } catch (error) {
-        console.error(`Error playing audio ${id}:`, error);
-        reject(error);
-      }
-    });
-  }
-  
-  stop(id: string): void {
-    const audio = this.audioElements.get(id);
-    if (audio) {
-      audio.pause();
-      audio.currentTime = 0;
+/**
+ * Plays an audio file with proper error handling
+ * @param audioElement The HTML Audio element to play
+ * @param volume Volume level (0-100)
+ * @returns Promise that resolves when audio starts playing or rejects with error
+ */
+export const playAudio = (audioElement: HTMLAudioElement | null, volume: number): Promise<void> => {
+  return new Promise((resolve, reject) => {
+    if (!audioElement) {
+      reject(new Error('Audio element not initialized'));
+      return;
     }
-  }
-  
-  cleanup(): void {
-    this.audioElements.forEach((audio, id) => {
-      audio.pause();
-      audio.removeAttribute('src');
-      audio.load();
-    });
-    
-    this.audioElements.clear();
-    this.loaded.clear();
-    this.errors.clear();
-  }
-}
 
-// Create a singleton instance
-export const audioManager = new AudioManager();
-
-// Utility functions
-export const loadAlertSound = async (): Promise<void> => {
-  try {
-    await audioManager.loadAudio('alert', '/alert.mp3');
-  } catch (error) {
-    console.error('Failed to preload alert sound:', error);
-  }
+    try {
+      // Set volume (convert from 0-100 scale to 0-1)
+      audioElement.volume = Math.max(0, Math.min(volume / 100, 1));
+      
+      // Reset playback position
+      audioElement.currentTime = 0;
+      
+      // Play audio with proper error handling
+      const playPromise = audioElement.play();
+      
+      if (playPromise !== undefined) {
+        playPromise
+          .then(() => {
+            console.log('Audio playback started successfully');
+            resolve();
+          })
+          .catch(error => {
+            console.error('Audio playback failed:', error);
+            
+            // Handle specific error cases
+            if (error.name === 'NotAllowedError') {
+              console.warn('Audio playback was blocked by the browser. User interaction is required before audio can play.');
+            } else if (error.name === 'NotSupportedError') {
+              console.warn('The audio format is not supported by this browser.');
+            }
+            
+            reject(error);
+          });
+      } else {
+        resolve(); // Old browsers that don't return a promise
+      }
+    } catch (error) {
+      console.error('Error playing audio:', error);
+      reject(error);
+    }
+  });
 };
 
-export const playAlertSound = (options: AudioManagerOptions): Promise<void> => {
-  return audioManager.play('alert', options).catch(error => {
-    console.error('Failed to play alert sound:', error);
-    return Promise.reject(error);
-  });
+/**
+ * Initializes an audio element with proper error handling
+ * @param audioUrl URL of the audio file to load
+ * @returns The audio element or null if initialization failed
+ */
+export const initializeAudio = (audioUrl: string): HTMLAudioElement | null => {
+  try {
+    const audio = new Audio(audioUrl);
+    audio.preload = 'auto';
+    
+    // Force a load attempt
+    audio.load();
+    
+    return audio;
+  } catch (error) {
+    console.error('Error initializing audio:', error);
+    return null;
+  }
 };

@@ -1,69 +1,81 @@
 
-export type StorageKey = 
-  | 'sentinel-connection-settings'
-  | 'sentinel-sound-enabled'
-  | 'sentinel-notifications-enabled'
-  | 'sentinel-sound-volume';
+/**
+ * Utility functions for safely handling browser storage operations
+ */
 
 /**
- * Get a value from local storage with error handling and type conversion
+ * Safely retrieves a value from localStorage with type conversion
+ * @param key The key to retrieve from localStorage
+ * @param defaultValue The default value to return if retrieval fails
+ * @returns The retrieved value or the default value
  */
-export function getFromStorage<T>(key: StorageKey, defaultValue: T): T {
+export function getFromStorage<T>(key: string, defaultValue: T): T {
   try {
-    const stored = localStorage.getItem(key);
-    if (stored === null) return defaultValue;
+    const item = localStorage.getItem(key);
+    if (item === null) return defaultValue;
     
-    if (typeof defaultValue === 'boolean') {
-      return (stored === 'true') as unknown as T;
+    // Try to parse as JSON if it's not a string
+    if (typeof defaultValue !== 'string') {
+      try {
+        return JSON.parse(item) as T;
+      } catch {
+        return defaultValue;
+      }
     }
     
-    if (typeof defaultValue === 'number') {
-      const parsed = parseInt(stored, 10);
-      return (isNaN(parsed) ? defaultValue : parsed) as unknown as T;
-    }
-    
-    if (typeof defaultValue === 'object') {
-      return JSON.parse(stored) as T;
-    }
-    
-    return stored as unknown as T;
+    // If default is string, return item directly
+    return item as unknown as T;
   } catch (error) {
-    console.error(`Error loading ${key} from localStorage:`, error);
+    console.error(`Error retrieving ${key} from localStorage:`, error);
     return defaultValue;
   }
 }
 
 /**
- * Save a value to local storage with error handling
+ * Safely stores a value in localStorage with type handling
+ * @param key The key to use in localStorage
+ * @param value The value to store
+ * @returns true if successful, false if failed
  */
-export function saveToStorage<T>(key: StorageKey, value: T): void {
+export function saveToStorage<T>(key: string, value: T): boolean {
   try {
-    if (value === undefined || value === null) {
-      localStorage.removeItem(key);
-      return;
+    if (typeof value === 'string') {
+      localStorage.setItem(key, value);
+    } else {
+      localStorage.setItem(key, JSON.stringify(value));
     }
-    
-    const valueToStore =
-      typeof value === 'object' ? JSON.stringify(value) : String(value);
-    
-    localStorage.setItem(key, valueToStore);
+    return true;
   } catch (error) {
     console.error(`Error saving ${key} to localStorage:`, error);
+    return false;
   }
 }
 
 /**
- * Load all persisted settings from storage
+ * Safely removes a key from localStorage
+ * @param key The key to remove
+ * @returns true if successful, false if failed
  */
-export function loadPersistedSettings() {
-  return {
-    connectionSettings: getFromStorage('sentinel-connection-settings', {
-      apiKey: '',
-      apiUrl: '',
-      blockchainUrl: '',
-    }),
-    soundEnabled: getFromStorage('sentinel-sound-enabled', false),
-    notificationsEnabled: getFromStorage('sentinel-notifications-enabled', true),
-    soundVolume: getFromStorage('sentinel-sound-volume', 70),
-  };
+export function removeFromStorage(key: string): boolean {
+  try {
+    localStorage.removeItem(key);
+    return true;
+  } catch (error) {
+    console.error(`Error removing ${key} from localStorage:`, error);
+    return false;
+  }
+}
+
+/**
+ * Safely checks if a key exists in localStorage
+ * @param key The key to check
+ * @returns true if key exists, false otherwise
+ */
+export function hasStorageKey(key: string): boolean {
+  try {
+    return localStorage.getItem(key) !== null;
+  } catch (error) {
+    console.error(`Error checking for ${key} in localStorage:`, error);
+    return false;
+  }
 }
