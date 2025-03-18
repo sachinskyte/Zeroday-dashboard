@@ -1,83 +1,47 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react';
 import Header from '@/components/Header';
-import ThreatStats from '@/components/ThreatStats';
-import LiveAttackFeed from '@/components/LiveAttackFeed';
+import { ThreatStats } from '@/components/stats/ThreatStats';
+import { LiveAttackFeed } from '@/components/feeds/LiveAttackFeed';
 import ThreatMap from '@/components/ThreatMap';
-import BlockchainViewer from '@/components/BlockchainViewer';
+import { BlockchainViewer } from '@/components/blockchain/BlockchainViewer';
 import ThreatChart from '@/components/ThreatChart';
 import AlertBanner from '@/components/AlertBanner';
 import ThreatTrends from '@/components/ThreatTrends';
-import ConnectionStatus from '@/components/ConnectionStatus';
+import { ConnectionStatus } from '@/components/settings/ConnectionStatus';
 import { useThreatData, ThreatData } from '@/hooks/useThreatData';
 import { Toaster } from 'sonner';
 import { ThemeProvider } from '@/components/theme-provider';
 import { Shield, AlertOctagon } from 'lucide-react';
-
-// Create and add alert.mp3 to public folder
-const ALERT_SOUND_URL = '/alert.mp3';
+import { loadAlertSound, playAlertSound } from '@/utils/audioUtils';
+import { getFromStorage, saveToStorage, loadPersistedSettings } from '@/utils/storageUtils';
 
 const Index = () => {
   // Load persisted settings from localStorage with error handling
   const [persistedSettings, setPersistedSettings] = useState(() => {
-    try {
-      const stored = localStorage.getItem('sentinel-connection-settings');
-      return stored ? JSON.parse(stored) : {
-        apiKey: '',
-        apiUrl: '',
-        blockchainUrl: '',
-      };
-    } catch (error) {
-      console.error('Error loading persisted settings:', error);
-      return {
-        apiKey: '',
-        apiUrl: '',
-        blockchainUrl: '',
-      };
-    }
+    return loadPersistedSettings().connectionSettings;
   });
   
   const [soundEnabled, setSoundEnabled] = useState(() => {
-    try {
-      return localStorage.getItem('sentinel-sound-enabled') === 'true';
-    } catch (error) {
-      console.error('Error loading sound setting:', error);
-      return false;
-    }
+    return loadPersistedSettings().soundEnabled;
   });
   
   const [notificationsEnabled, setNotificationsEnabled] = useState(() => {
-    try {
-      return localStorage.getItem('sentinel-notifications-enabled') !== 'false';
-    } catch (error) {
-      console.error('Error loading notifications setting:', error);
-      return true;
-    }
+    return loadPersistedSettings().notificationsEnabled;
   });
   
   const [soundVolume, setSoundVolume] = useState(() => {
-    try {
-      const storedVolume = localStorage.getItem('sentinel-sound-volume');
-      return storedVolume ? parseInt(storedVolume, 10) : 70;
-    } catch (error) {
-      console.error('Error loading volume setting:', error);
-      return 70;
-    }
+    return loadPersistedSettings().soundVolume;
   });
   
   const [currentAlert, setCurrentAlert] = useState<ThreatData | null>(null);
   const [alertHistory, setAlertHistory] = useState<string[]>([]);
-  const audioRef = useRef<HTMLAudioElement | null>(null);
   const [audioLoaded, setAudioLoaded] = useState(false);
   const [audioError, setAudioError] = useState<string | null>(null);
   
   // Safely persist settings to localStorage
-  const safelyPersistToStorage = useCallback((key: string, value: any) => {
-    try {
-      localStorage.setItem(key, typeof value === 'string' ? value : JSON.stringify(value));
-    } catch (error) {
-      console.error(`Error persisting ${key} to localStorage:`, error);
-    }
+  const safelyPersistToStorage = useCallback((key, value) => {
+    saveToStorage(key, value);
   }, []);
   
   useEffect(() => {
@@ -85,55 +49,32 @@ const Index = () => {
   }, [persistedSettings, safelyPersistToStorage]);
   
   useEffect(() => {
-    safelyPersistToStorage('sentinel-sound-enabled', soundEnabled.toString());
+    safelyPersistToStorage('sentinel-sound-enabled', soundEnabled);
   }, [soundEnabled, safelyPersistToStorage]);
   
   useEffect(() => {
-    safelyPersistToStorage('sentinel-notifications-enabled', notificationsEnabled.toString());
+    safelyPersistToStorage('sentinel-notifications-enabled', notificationsEnabled);
   }, [notificationsEnabled, safelyPersistToStorage]);
   
   useEffect(() => {
-    safelyPersistToStorage('sentinel-sound-volume', soundVolume.toString());
+    safelyPersistToStorage('sentinel-sound-volume', soundVolume);
   }, [soundVolume, safelyPersistToStorage]);
 
-  // Fix audio loading with better error handling
+  // Load audio with better error handling
   useEffect(() => {
-    try {
-      // Create audio element and set its properties
-      const audio = new Audio(ALERT_SOUND_URL);
-      audio.preload = 'auto';
-      audioRef.current = audio;
-      
-      const handleAudioLoaded = () => {
-        console.log('Audio loaded successfully');
+    const initAudio = async () => {
+      try {
+        await loadAlertSound();
         setAudioLoaded(true);
         setAudioError(null);
-      };
-      
-      const handleAudioError = (e: ErrorEvent) => {
-        console.error('Error loading audio:', e);
+      } catch (error) {
+        console.error('Failed to initialize audio:', error);
         setAudioLoaded(false);
         setAudioError('Failed to load alert sound');
-      };
-      
-      audio.addEventListener('canplaythrough', handleAudioLoaded);
-      audio.addEventListener('error', handleAudioError as EventListener);
-      
-      // Try to load the audio file
-      audio.load();
-      
-      return () => {
-        if (audio) {
-          audio.pause();
-          audio.removeEventListener('canplaythrough', handleAudioLoaded);
-          audio.removeEventListener('error', handleAudioError as EventListener);
-        }
-      };
-    } catch (error) {
-      console.error('Error initializing audio:', error);
-      setAudioError('Failed to initialize audio');
-      return () => {};
-    }
+      }
+    };
+    
+    initAudio();
   }, []);
   
   const { 
@@ -187,20 +128,8 @@ const Index = () => {
         setAlertHistory(prev => [...prev, highSeverityThreats[0].id]);
         
         // Play sound for high severity threats if enabled
-        if (soundEnabled && audioRef.current && audioLoaded) {
-          try {
-            audioRef.current.volume = soundVolume / 100;
-            audioRef.current.currentTime = 0;
-            audioRef.current.play().catch(err => {
-              console.error('Error playing audio:', err);
-              // Handle autoplay restrictions
-              if (err.name === 'NotAllowedError') {
-                console.warn('Audio playback was blocked by the browser. User interaction required.');
-              }
-            });
-          } catch (error) {
-            console.error('Error playing alert sound:', error);
-          }
+        if (soundEnabled && audioLoaded) {
+          playAlertSound({ soundEnabled, soundVolume });
         }
       }
     } catch (error) {
@@ -321,7 +250,7 @@ const Index = () => {
                   <div className="md:col-span-8 h-[400px]">
                     <ThreatMap threats={threatData} />
                   </div>
-                  <div className="md:col-span-4">
+                  <div className="md:col-span-4 h-[400px]">
                     <BlockchainViewer data={blockchainData} />
                   </div>
                 </section>

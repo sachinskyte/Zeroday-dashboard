@@ -1,7 +1,7 @@
 
 import { useState, useEffect } from 'react';
 import { Shield } from 'lucide-react';
-import SettingsPanel from './SettingsPanel';
+import { SettingsPanel } from './settings/SettingsPanel';
 import { Button } from "@/components/ui/button";
 
 interface HeaderProps {
