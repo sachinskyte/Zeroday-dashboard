@@ -1,7 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { BlockchainData, BlockchainBlock, ThreatData } from '@/hooks/useThreatData';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
 import { 
@@ -15,7 +14,12 @@ import {
   Clock,
   Repeat,
   ListChecks,
-  Lightbulb
+  Lightbulb,
+  Menu,
+  ChevronLeft,
+  LayoutDashboard,
+  LineChart,
+  Settings
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -45,9 +49,10 @@ interface ChatbotSuggesterProps {
   blockchainData: BlockchainData | null;
   isConnected: boolean;
   className?: string;
+  onBack?: () => void;
 }
 
-const ChatbotSuggester = ({ blockchainData, isConnected, className }: ChatbotSuggesterProps) => {
+const ChatbotSuggester = ({ blockchainData, isConnected, className, onBack }: ChatbotSuggesterProps) => {
   console.log('ChatbotSuggester rendering, isConnected:', isConnected);
   console.log('blockchainData available:', !!blockchainData);
   
@@ -67,6 +72,7 @@ const ChatbotSuggester = ({ blockchainData, isConnected, className }: ChatbotSug
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
   
   // Update local connection status based on props and blockchain data
   useEffect(() => {
@@ -133,6 +139,13 @@ const ChatbotSuggester = ({ blockchainData, isConnected, className }: ChatbotSug
       messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
     }
   }, [messages]);
+
+  // Focus input on load
+  useEffect(() => {
+    if (inputRef.current) {
+      inputRef.current.focus();
+    }
+  }, []);
   
   // Function to analyze blockchain data and generate responses
   const analyzeBlockchainData = (userQuery: string) => {
@@ -420,129 +433,200 @@ What specific aspect would you like me to analyze further?`;
     );
   };
   
+  // Add navigation handler
+  const handleNavigation = (path: string) => {
+    window.location.href = path;
+  };
+
   return (
-    <Card
-      className={cn(
-        "flex flex-col shadow-md border-slate-200 dark:border-slate-800 rounded-lg relative overflow-hidden z-20",
-        className
-      )}
-    >
-      <CardHeader className="p-4 border-b border-slate-200 dark:border-slate-800 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950/40 dark:to-indigo-950/40">
-        <div className="flex items-center gap-3 justify-between">
-          <div className="flex items-center gap-3">
-            <div className="h-10 w-10 rounded-full bg-blue-600/10 dark:bg-blue-500/20 flex items-center justify-center">
-              <Shield className="h-5 w-5 text-blue-600 dark:text-blue-400" />
-            </div>
-            <div>
-              <CardTitle className="text-xl flex items-center gap-2">
-                CyberGuard Assistant 
-                <Badge variant="outline" className="h-5 font-normal text-[10px] bg-blue-50 dark:bg-blue-900/30 border-blue-200 dark:border-blue-800 text-blue-700 dark:text-blue-400">AI</Badge>
-              </CardTitle>
-              <p className="text-sm text-slate-500 dark:text-slate-400">Advanced security analysis and threat intelligence</p>
+    <div className="fixed inset-0 flex flex-col bg-white dark:bg-slate-950 z-50">
+      {/* Header */}
+      <div className="flex flex-col border-b border-slate-200 dark:border-slate-800">
+        <div className="flex items-center justify-between px-4 py-3 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950/40 dark:to-indigo-950/40">
+          <div className="flex items-center gap-4">
+            {onBack && (
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                className="h-9 w-9" 
+                onClick={onBack}
+              >
+                <ChevronLeft className="h-5 w-5" />
+              </Button>
+            )}
+            <div className="flex items-center gap-3">
+              <div className="h-10 w-10 rounded-full bg-blue-600/10 dark:bg-blue-500/20 flex items-center justify-center">
+                <Shield className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+              </div>
+              <div>
+                <h1 className="text-xl font-semibold flex items-center gap-2">
+                  CyberGuard Assistant 
+                  <Badge variant="outline" className="h-5 font-normal text-[10px] bg-blue-50 dark:bg-blue-900/30 border-blue-200 dark:border-blue-800 text-blue-700 dark:text-blue-400">AI</Badge>
+                </h1>
+                <p className="text-sm text-slate-500 dark:text-slate-400">Advanced security analysis and threat intelligence</p>
+              </div>
             </div>
           </div>
-          <Badge variant={localConnectionStatus ? "success" : "destructive"} className="px-3 py-1">
-            {localConnectionStatus ? "Connected" : "Disconnected"}
-          </Badge>
+          <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2">
+              <Button
+                variant="ghost"
+                size="sm"
+                className="flex items-center gap-2 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100"
+                onClick={() => handleNavigation('/')}
+              >
+                <LayoutDashboard className="h-4 w-4" />
+                <span>Dashboard</span>
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="flex items-center gap-2 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100"
+                onClick={() => handleNavigation('/blockchain-analytics')}
+              >
+                <LineChart className="h-4 w-4" />
+                <span>Analytics</span>
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="flex items-center gap-2 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100"
+                onClick={() => handleNavigation('/cyberguard-dashboard')}
+              >
+                <Shield className="h-4 w-4" />
+                <span>CyberGuard</span>
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="flex items-center gap-2 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100"
+                onClick={() => document.getElementById('settings-trigger')?.click()}
+              >
+                <Settings className="h-4 w-4" />
+                <span>Settings</span>
+              </Button>
+            </div>
+            <Badge variant="outline" className={cn("px-3 py-1", {
+              "bg-green-50 dark:bg-green-900/30 border-green-200 dark:border-green-800 text-green-700 dark:text-green-400": localConnectionStatus,
+              "bg-red-50 dark:bg-red-900/30 border-red-200 dark:border-red-800 text-red-700 dark:text-red-400": !localConnectionStatus
+            })}>
+              {localConnectionStatus ? "Connected" : "Disconnected"}
+            </Badge>
+          </div>
         </div>
-      </CardHeader>
+      </div>
       
-      <div className="flex flex-col h-[calc(100%-76px)] relative">
-        <ScrollArea 
-          className="flex-1 p-4 overflow-y-auto gradient-mask-b-10" 
-          ref={messagesEndRef}
-        >
+      {/* Main content */}
+      <div className="flex-1 flex flex-col overflow-hidden">
+        {/* Messages container */}
+        <ScrollArea className="flex-1 px-4 py-6 overflow-y-auto">
           {renderDisconnectedWarning()}
+          
           {messages.length === 0 ? (
-            <div className="flex flex-col gap-4 items-center justify-center h-full text-center p-6">
-              <div className="w-20 h-20 rounded-full bg-gradient-to-br from-blue-100 to-indigo-100 dark:from-blue-900/30 dark:to-indigo-900/30 flex items-center justify-center shadow-sm">
-                <Shield className="h-10 w-10 text-blue-600 dark:text-blue-400" />
+            <div className="flex flex-col gap-6 items-center justify-center h-full text-center p-6">
+              <div className="w-24 h-24 rounded-full bg-gradient-to-br from-blue-100 to-indigo-100 dark:from-blue-900/30 dark:to-indigo-900/30 flex items-center justify-center shadow-sm">
+                <Shield className="h-12 w-12 text-blue-600 dark:text-blue-400" />
               </div>
-              <div className="space-y-2">
-                <h3 className="text-xl font-semibold text-slate-900 dark:text-slate-100">CyberGuard Assistant</h3>
-                <p className="text-sm text-slate-500 dark:text-slate-400 max-w-xl">
+              <div className="space-y-3 max-w-lg">
+                <h3 className="text-2xl font-semibold text-slate-900 dark:text-slate-100">CyberGuard Assistant</h3>
+                <p className="text-slate-500 dark:text-slate-400">
                   Your AI-powered security analyst. Ask about threats, analyze vulnerabilities, or get advanced security insights from your blockchain data.
                 </p>
               </div>
-              <div className="mt-6 bg-gradient-to-r from-blue-50/50 to-indigo-50/50 dark:from-blue-900/10 dark:to-indigo-900/10 rounded-lg p-4 w-full max-w-2xl">
-                <p className="text-sm font-medium text-slate-600 dark:text-slate-300 mb-3">Try asking about:</p>
+              <div className="mt-6 bg-gradient-to-r from-blue-50/50 to-indigo-50/50 dark:from-blue-900/10 dark:to-indigo-900/10 rounded-lg p-6 w-full max-w-2xl">
+                <p className="text-sm font-medium text-slate-600 dark:text-slate-300 mb-4">Try asking about:</p>
                 {renderSuggestedQueries()}
               </div>
             </div>
           ) : (
-            <div className="space-y-4 pt-1 pb-10 max-w-4xl mx-auto">
+            <div className="space-y-6 max-w-3xl mx-auto">
               {messages.map((message) => (
                 <div
                   key={message.id}
-                  className={cn("flex flex-col max-w-[85%] px-4 py-3 rounded-lg", {
-                    "ml-auto bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-br-none shadow-sm": message.role === 'user',
-                    "mr-auto bg-gradient-to-r from-slate-50 to-slate-100 dark:from-slate-800 dark:to-slate-800/80 text-slate-900 dark:text-slate-100 rounded-bl-none shadow-sm": message.role === 'bot',
+                  className={cn("flex", {
+                    "justify-end": message.role === 'user',
+                    "justify-start": message.role === 'bot',
                   })}
                 >
-                  <div className="whitespace-pre-line">{message.content}</div>
-                  <div className={cn("text-xs mt-1", {
-                    "text-blue-100 dark:text-blue-200/70": message.role === 'user',
-                    "text-slate-400 dark:text-slate-500": message.role === 'bot'
-                  })}>
-                    {message.timestamp.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+                  <div
+                    className={cn("max-w-[85%] px-5 py-4 rounded-2xl", {
+                      "bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-br-none shadow-md": message.role === 'user',
+                      "bg-gradient-to-r from-slate-100 to-slate-50 dark:from-slate-800 dark:to-slate-800/80 text-slate-900 dark:text-slate-100 rounded-bl-none shadow-md": message.role === 'bot',
+                    })}
+                  >
+                    <div className="whitespace-pre-line text-base">{message.content}</div>
+                    <div className={cn("text-xs mt-2", {
+                      "text-blue-100/70": message.role === 'user',
+                      "text-slate-400 dark:text-slate-500": message.role === 'bot'
+                    })}>
+                      {message.timestamp.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+                    </div>
                   </div>
                 </div>
               ))}
               {isLoading && (
-                <div className="flex gap-2 mr-auto max-w-[85%] px-4 py-3 rounded-lg bg-gradient-to-r from-slate-50 to-slate-100 dark:from-slate-800 dark:to-slate-800/80 text-slate-900 dark:text-slate-100 rounded-bl-none shadow-sm">
-                  <div className="flex gap-1 items-center">
-                    <span className="w-2 h-2 rounded-full bg-blue-400 dark:bg-blue-500 animate-pulse" style={{ animationDelay: '0ms' }}></span>
-                    <span className="w-2 h-2 rounded-full bg-blue-400 dark:bg-blue-500 animate-pulse" style={{ animationDelay: '300ms' }}></span>
-                    <span className="w-2 h-2 rounded-full bg-blue-400 dark:bg-blue-500 animate-pulse" style={{ animationDelay: '600ms' }}></span>
+                <div className="flex justify-start">
+                  <div className="max-w-[85%] px-5 py-4 rounded-2xl bg-gradient-to-r from-slate-100 to-slate-50 dark:from-slate-800 dark:to-slate-800/80 text-slate-900 dark:text-slate-100 rounded-bl-none shadow-md">
+                    <div className="flex gap-2 items-center">
+                      <span className="w-2.5 h-2.5 rounded-full bg-blue-400 dark:bg-blue-500 animate-pulse" style={{ animationDelay: '0ms' }}></span>
+                      <span className="w-2.5 h-2.5 rounded-full bg-blue-400 dark:bg-blue-500 animate-pulse" style={{ animationDelay: '300ms' }}></span>
+                      <span className="w-2.5 h-2.5 rounded-full bg-blue-400 dark:bg-blue-500 animate-pulse" style={{ animationDelay: '600ms' }}></span>
+                    </div>
                   </div>
                 </div>
               )}
+              <div ref={messagesEndRef} />
             </div>
           )}
         </ScrollArea>
         
+        {/* Suggestions */}
         {messages.length > 0 && (
-          <div className="px-4 py-3 border-t border-slate-200 dark:border-slate-800 bg-gradient-to-r from-slate-50/80 to-slate-50/80 dark:from-slate-900/60 dark:to-slate-900/60 backdrop-blur-sm">
-            <div className="flex items-center mb-2">
+          <div className="px-4 py-3 bg-gradient-to-r from-slate-50/80 to-slate-50/80 dark:from-slate-900/60 dark:to-slate-900/60 backdrop-blur-sm border-t border-slate-200 dark:border-slate-800">
+            <div className="flex items-center mb-2 max-w-3xl mx-auto">
               <Lightbulb className="h-3.5 w-3.5 text-blue-500 mr-1.5" />
               <span className="text-xs font-medium text-slate-600 dark:text-slate-300">Security intelligence</span>
             </div>
-            {renderSuggestedQueries()}
+            <div className="max-w-3xl mx-auto">
+              {renderSuggestedQueries()}
+            </div>
           </div>
         )}
         
+        {/* Input area */}
         <form 
           onSubmit={(e) => {
             e.preventDefault();
             handleSendMessage();
           }}
-          className="p-4 border-t border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 sticky bottom-0"
+          className="px-4 py-4 border-t border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950"
         >
-          <div className="max-w-4xl mx-auto flex gap-2">
+          <div className="max-w-3xl mx-auto flex gap-3">
             <Input
+              ref={inputRef}
               placeholder="Ask about security threats or vulnerabilities..."
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={handleKeyDown}
               disabled={!localConnectionStatus && (!blockchainData || !blockchainData.chain || blockchainData.chain.length === 0)}
-              className="flex-1 h-12 border-slate-300 dark:border-slate-700 focus-visible:ring-blue-500"
+              className="flex-1 h-14 text-base border-slate-300 dark:border-slate-700 focus-visible:ring-blue-500 rounded-full px-6"
               aria-label="Chat message input"
             />
             <Button 
               type="submit" 
               size="icon"
-              className="h-12 w-12 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white shadow-sm"
+              className="h-14 w-14 rounded-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white shadow-md"
               disabled={!localConnectionStatus && (!blockchainData || !blockchainData.chain || blockchainData.chain.length === 0)}
               aria-label="Send message"
             >
-              <SendIcon className="h-5 w-5" />
+              <SendIcon className="h-6 w-6" />
               <span className="sr-only">Send</span>
             </Button>
           </div>
         </form>
       </div>
-    </Card>
+    </div>
   );
 };
 
-export default ChatbotSuggester; 
+export default ChatbotSuggester;
