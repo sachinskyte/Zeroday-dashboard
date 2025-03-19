@@ -9,7 +9,7 @@ import AlertBanner from '@/components/alerts/AlertBanner';
 import ThreatTrends from '@/components/charts/ThreatTrends';
 import ConnectionStatus from '@/features/settings/ConnectionStatus';
 import { useThreatData, ThreatData } from '@/hooks/useThreatData';
-import { Toaster } from 'sonner';
+import { Toaster, toast } from 'sonner';
 import { ThemeProvider } from '@/components/theme-provider';
 import { Shield, AlertOctagon } from 'lucide-react';
 import { getFromStorage, saveToStorage } from '@/utils/storageUtils';
@@ -193,6 +193,19 @@ const Index = () => {
     setPersistedSettings(newSettings);
     disconnect();
   }, [disconnect]);
+  
+  useEffect(() => {
+    if (isConnected && blockchainConnected) {
+      // Notify users about the chatbot feature when connected
+      toast.info(
+        'Blockchain AI Assistant is available! Click the chat icon in the bottom right corner to analyze your threat data.',
+        {
+          duration: 5000,
+          id: 'chatbot-notification', // Prevent duplicate toasts
+        }
+      );
+    }
+  }, [isConnected, blockchainConnected]);
   
   return (
     <ThemeProvider defaultTheme="dark">

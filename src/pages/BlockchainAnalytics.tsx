@@ -3,13 +3,14 @@ import Header from '@/components/Header';
 import BlockchainGraphs from '@/components/charts/BlockchainGraphs';
 import ConnectionStatus from '@/features/settings/ConnectionStatus';
 import { useThreatData } from '@/hooks/useThreatData';
-import { Toaster } from 'sonner';
+import { Toaster, toast } from 'sonner';
 import { ThemeProvider } from '@/components/theme-provider';
 import { Database, ArrowLeft, AlertCircle } from 'lucide-react';
 import { getFromStorage, saveToStorage } from '@/utils/storageUtils';
 import { useNavigate } from 'react-router-dom';
 
 const BlockchainAnalytics = () => {
+  console.log('BlockchainAnalytics rendering');
   const navigate = useNavigate();
   // Load persisted settings from localStorage
   const [persistedSettings, setPersistedSettings] = useState(() => 
@@ -45,6 +46,22 @@ const BlockchainAnalytics = () => {
       }
     }
   }, [persistedSettings, isConnected, isLoading, isReconnecting, connectToSources]);
+  
+  useEffect(() => {
+    console.log('BlockchainData in analytics:', blockchainData);
+    console.log('Connected status:', isConnected, blockchainConnected);
+    
+    if (isConnected && blockchainConnected) {
+      // Notify users about the chatbot feature when connected
+      toast.info(
+        'Blockchain AI Assistant is available! Click the chat icon in the bottom right corner to analyze your threat data.',
+        {
+          duration: 5000,
+          id: 'chatbot-notification', // Prevent duplicate toasts
+        }
+      );
+    }
+  }, [blockchainData, isConnected, blockchainConnected]);
   
   const handleDisconnect = () => {
     disconnect();

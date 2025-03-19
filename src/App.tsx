@@ -7,6 +7,7 @@ import { ThemeProvider } from "@/components/theme-provider";
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
 import BlockchainAnalytics from "./pages/BlockchainAnalytics";
+import CyberGuardDashboard from "./pages/CyberGuardDashboard";
 
 const queryClient = new QueryClient();
 
@@ -20,6 +21,7 @@ const App = () => (
           <Routes>
             <Route path="/" element={<Index />} />
             <Route path="/blockchain-analytics" element={<BlockchainAnalytics />} />
+            <Route path="/cyber-guard" element={<CyberGuardDashboard />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>
