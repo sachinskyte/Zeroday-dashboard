@@ -1,12 +1,12 @@
-
 import { useEffect, useState } from 'react';
-import { Database, Lock, Hash, Clock, FileText, ChevronDown, ChevronUp, Shield, HistoryIcon, KeyRound, ServerIcon } from 'lucide-react';
+import { Database, Lock, Hash, Clock, FileText, ChevronDown, ChevronUp, Shield, HistoryIcon, KeyRound, ServerIcon, BarChart } from 'lucide-react';
 import { BlockchainData } from '@/hooks/useThreatData';
 import { format, formatDistanceToNow } from 'date-fns';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { useNavigate } from 'react-router-dom';
 
 interface BlockchainViewerProps {
   data: BlockchainData | null;
@@ -159,6 +159,7 @@ const BlockchainBlock = ({
 
 const BlockchainViewer = ({ data }: BlockchainViewerProps) => {
   const [visibleBlocks, setVisibleBlocks] = useState(3);
+  const navigate = useNavigate();
   
   useEffect(() => {
     // Reset visible blocks when data changes
@@ -193,13 +194,22 @@ const BlockchainViewer = ({ data }: BlockchainViewerProps) => {
   return (
     <Card className="animate-fade-in h-full flex flex-col">
       <CardHeader className="pb-2 flex-shrink-0">
-        <CardTitle className="flex items-center">
-          <HistoryIcon className="h-5 w-5 text-primary mr-2" />
-          Blockchain Ledger
-          <span className="ml-auto text-xs text-muted-foreground bg-muted/50 px-2 py-0.5 rounded-full">
-            {data.chain.length} blocks
-          </span>
-        </CardTitle>
+        <div className="flex items-center justify-between">
+          <CardTitle className="flex items-center">
+            <HistoryIcon className="h-5 w-5 text-primary mr-2" />
+            Blockchain Ledger
+            <span className="ml-2 text-xs text-muted-foreground bg-muted/50 px-2 py-0.5 rounded-full">
+              {data.chain.length} blocks
+            </span>
+          </CardTitle>
+          <button 
+            onClick={() => navigate('/blockchain-analytics')}
+            className="flex items-center text-xs bg-primary/10 hover:bg-primary/20 text-primary px-3 py-1 rounded-md transition-colors"
+          >
+            <BarChart className="h-3.5 w-3.5 mr-1.5" />
+            View Analytics
+          </button>
+        </div>
       </CardHeader>
       <CardContent className="flex-grow overflow-y-auto pb-6 pt-0" style={{ height: 'calc(100% - 60px)' }}>
         <div className="text-sm text-muted-foreground mb-4">

@@ -15,11 +15,13 @@ import { Shield, AlertOctagon } from 'lucide-react';
 import { getFromStorage, saveToStorage } from '@/utils/storageUtils';
 import { playAudio, initializeAudio } from '@/utils/audioUtils';
 import { getNewHighSeverityThreats } from '@/utils/dataUtils';
+import { useNavigate } from 'react-router-dom';
 
 // Create and add alert.mp3 to public folder
 const ALERT_SOUND_URL = '/alert.mp3';
 
 const Index = () => {
+  const navigate = useNavigate();
   // Load persisted settings from localStorage with error handling
   const [persistedSettings, setPersistedSettings] = useState(() => 
     getFromStorage('sentinel-connection-settings', {
@@ -313,6 +315,16 @@ const Index = () => {
                       </div>
                       <div className="h-[calc(100%-61px)] overflow-auto">
                         <BlockchainViewer data={blockchainData} />
+                        {blockchainData && blockchainData.chain.length > 0 && (
+                          <div className="flex justify-center mt-4 pb-4">
+                            <button 
+                              onClick={() => navigate('/blockchain-analytics')}
+                              className="text-sm bg-primary/10 hover:bg-primary/20 text-primary px-4 py-2 rounded-md transition-colors"
+                            >
+                              View Advanced Analytics
+                            </button>
+                          </div>
+                        )}
                       </div>
                     </div>
                   </div>
