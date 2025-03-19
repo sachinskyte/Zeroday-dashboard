@@ -19,7 +19,9 @@ import {
   ChevronLeft,
   LayoutDashboard,
   LineChart,
-  Settings
+  Settings,
+  AlertOctagon,
+  Network
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -397,6 +399,12 @@ What specific aspect would you like me to analyze further?`;
       { text: "What are the common attack patterns?", icon: <Repeat className="h-3.5 w-3.5" /> },
       { text: "Generate threat intelligence summary", icon: <ListChecks className="h-3.5 w-3.5" /> },
       { text: "How to mitigate these vulnerabilities?", icon: <Shield className="h-3.5 w-3.5" /> },
+      { text: "Show high severity threats", icon: <AlertCircle className="h-3.5 w-3.5" /> },
+      { text: "What ports are being targeted?", icon: <Database className="h-3.5 w-3.5" /> },
+      { text: "Give me a security assessment", icon: <ListChecks className="h-3.5 w-3.5" /> },
+      { text: "Show attack trends over time", icon: <LineChart className="h-3.5 w-3.5" /> },
+      { text: "What are the latest critical alerts?", icon: <AlertOctagon className="h-3.5 w-3.5" /> },
+      { text: "Analyze protocol usage patterns", icon: <Network className="h-3.5 w-3.5" /> }
     ];
     
     // Always show suggestions
