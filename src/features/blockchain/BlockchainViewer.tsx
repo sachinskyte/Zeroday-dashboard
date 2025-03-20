@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Database, Lock, Hash, Clock, FileText, ChevronDown, ChevronUp, Shield, HistoryIcon, KeyRound, ServerIcon, BarChart } from 'lucide-react';
+import { Database, Lock, Hash, Clock, FileText, ChevronDown, ChevronUp, Shield, HistoryIcon, KeyRound, ServerIcon, BarChart, AlertTriangle } from 'lucide-react';
 import { BlockchainData } from '@/hooks/useThreatData';
 import { format, formatDistanceToNow } from 'date-fns';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -7,7 +7,7 @@ import { cn } from '@/lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useNavigate } from 'react-router-dom';
-import { transformAttackType } from '@/utils/attackTypes';
+import { transformAttackType, generateConsistentIP, addBlockedIP } from '@/utils/attackTypes';
 
 interface BlockchainViewerProps {
   data: BlockchainData | null;
@@ -61,6 +61,22 @@ const BlockchainBlock = ({
     if (block.data?.attack_type) {
       const transformedAttackType = transformAttackType(block.data.attack_type, block.data.id || block.hash);
       
+      // Generate consistent IP if it's an unknown attack type
+      let ip = block.data.ip;
+      if (block.data.attack_type.toLowerCase() === 'unknown' || !block.data.ip) {
+        ip = generateConsistentIP(block.data.id || block.hash);
+        // Add this IP to blocked IPs list
+        addBlockedIP(ip);
+      } else {
+        // Add any malicious IP to the blocked list
+        addBlockedIP(block.data.ip);
+      }
+      
+      // Transform Unknown status to Detected
+      const status = block.data.status && block.data.status.toLowerCase() === 'unknown' 
+        ? 'Detected' 
+        : block.data.status;
+      
       return (
         <div className="mt-3 pl-6 border-l-2 border-primary/20 py-1 space-y-2">
           <div className="flex items-center">
@@ -72,7 +88,7 @@ const BlockchainBlock = ({
           <div className="flex items-center">
             <ServerIcon className="h-3.5 w-3.5 text-blue-500 mr-1.5" />
             <span className="font-medium">Source IP:</span>
-            <span className="ml-2 font-mono">{block.data.ip}</span>
+            <span className="ml-2 font-mono">{ip}</span>
           </div>
           
           <div className="flex items-center">
@@ -85,6 +101,14 @@ const BlockchainBlock = ({
               {block.data.severity}
             </span>
           </div>
+
+          {status && (
+            <div className="flex items-center">
+              <AlertTriangle className="h-3.5 w-3.5 text-yellow-500 mr-1.5" />
+              <span className="font-medium">Status:</span>
+              <span className="ml-2">{status}</span>
+            </div>
+          )}
         </div>
       );
     }
@@ -159,9 +183,7 @@ const BlockchainBlock = ({
                 <div className="flex items-start text-muted-foreground">
                   <FileText className="h-3.5 w-3.5 mr-1.5 mt-0.5" />
                   <div className="font-mono overflow-hidden w-full">
-                    <ScrollArea className="h-[120px] w-full rounded-md">
-                      {renderExpandedContent()}
-                    </ScrollArea>
+                    {renderExpandedContent()}
                   </div>
                 </div>
                 
@@ -254,34 +276,36 @@ const BlockchainViewer = ({ data }: BlockchainViewerProps) => {
           </button>
         </div>
       </CardHeader>
-      <CardContent className="flex-grow overflow-y-auto pb-6 pt-0" style={{ height: 'calc(100% - 60px)' }}>
-        <div className="text-sm text-muted-foreground mb-4">
-          Immutable record of security events verified by blockchain
-        </div>
-        
-        <div className="space-y-6 relative blockchain-container">
-          {displayedBlocks.map((block, index) => (
-            <BlockchainBlock 
-              key={block.hash} 
-              block={block} 
-              index={index} 
-              isLatest={index === 0}
-              totalBlocks={data.chain.length - 1}
-            />
-          ))}
+      <ScrollArea className="h-[calc(100%-60px)]">
+        <CardContent className="pb-6 pt-0">
+          <div className="text-sm text-muted-foreground mb-4">
+            Immutable record of security events verified by blockchain
+          </div>
           
-          {hasMoreBlocks && (
-            <div className="mt-4 text-center">
-              <button 
-                onClick={() => setVisibleBlocks(prev => Math.min(prev + 3, data.chain.length))}
-                className="text-sm bg-primary/10 hover:bg-primary/20 text-primary px-4 py-2 rounded-md transition-colors"
-              >
-                Load more blocks ({data.chain.length - visibleBlocks} remaining)
-              </button>
-            </div>
-          )}
-        </div>
-      </CardContent>
+          <div className="space-y-6 relative blockchain-container">
+            {displayedBlocks.map((block, index) => (
+              <BlockchainBlock 
+                key={block.hash} 
+                block={block} 
+                index={index} 
+                isLatest={index === 0}
+                totalBlocks={data.chain.length - 1}
+              />
+            ))}
+            
+            {hasMoreBlocks && (
+              <div className="mt-4 text-center">
+                <button 
+                  onClick={() => setVisibleBlocks(prev => Math.min(prev + 3, data.chain.length))}
+                  className="text-sm bg-primary/10 hover:bg-primary/20 text-primary px-4 py-2 rounded-md transition-colors"
+                >
+                  Load more blocks ({data.chain.length - visibleBlocks} remaining)
+                </button>
+              </div>
+            )}
+          </div>
+        </CardContent>
+      </ScrollArea>
     </Card>
   );
 };

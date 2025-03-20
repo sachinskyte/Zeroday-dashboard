@@ -1,12 +1,12 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { ThreatData } from '@/hooks/useThreatData';
-import { Shield, AlertTriangle, CheckCircle, Filter, Clock, Server } from 'lucide-react';
+import { Shield, AlertTriangle, CheckCircle, Filter, Clock, Server, Zap } from 'lucide-react';
 import { format } from 'date-fns';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
 import { motion } from 'framer-motion';
-import { ATTACK_TYPES, transformAttackType } from '@/utils/attackTypes';
+import { ATTACK_TYPES, transformAttackType, generateConsistentIP, addBlockedIP } from '@/utils/attackTypes';
 
 interface LiveAttackFeedProps {
   threats: ThreatData[];
@@ -23,7 +23,7 @@ export const LiveAttackFeed = ({ threats }: LiveAttackFeedProps) => {
       case 'xss':
         return <AlertTriangle className="h-4 w-4" />;
       case 'ddos':
-        return <Server className="h-4 w-4" />;
+        return <Zap className="h-4 w-4" />;
       case 'ransomware':
         return <CheckCircle className="h-4 w-4" />;
       default:
@@ -31,11 +31,39 @@ export const LiveAttackFeed = ({ threats }: LiveAttackFeedProps) => {
     }
   };
   
-  // Process the threats to replace unknown attack types
-  const processedThreats = threats.map(threat => ({
-    ...threat,
-    attack_type: transformAttackType(threat.attack_type, threat.id)
-  }));
+  useEffect(() => {
+    // Add all malicious IPs to the blocked list
+    threats.forEach(threat => {
+      if (threat.attack_type.toLowerCase() === 'unknown' || !threat.ip) {
+        const ip = generateConsistentIP(threat.id);
+        addBlockedIP(ip);
+      } else {
+        // Add any malicious IP to the blocked list
+        addBlockedIP(threat.ip);
+      }
+    });
+  }, [threats]);
+  
+  // Process the threats to replace unknown attack types and ensure consistent IPs
+  const processedThreats = threats.map(threat => {
+    const transformedAttackType = transformAttackType(threat.attack_type, threat.id);
+    
+    // Generate consistent IP if it's an unknown attack type or missing IP
+    let ip = threat.ip;
+    if (threat.attack_type.toLowerCase() === 'unknown' || !threat.ip) {
+      ip = generateConsistentIP(threat.id);
+    }
+    
+    // Transform Unknown status to Detected
+    const status = threat.status.toLowerCase() === 'unknown' ? 'Detected' : threat.status;
+    
+    return {
+      ...threat,
+      attack_type: transformedAttackType,
+      ip,
+      status
+    };
+  });
   
   const filteredThreats = processedThreats.filter(threat => {
     if (filter === 'all') return true;
@@ -55,11 +83,21 @@ export const LiveAttackFeed = ({ threats }: LiveAttackFeedProps) => {
     }
   };
   
+  const getStatusLabel = (status: string) => {
+    return status.toLowerCase() === 'unknown' ? 'Detected' : status;
+  }
+  
   const getStatusColor = (status: string) => {
-    return status === 'Mitigated' 
+    const formattedStatus = status.toLowerCase() === 'unknown' ? 'detected' : status.toLowerCase();
+    return formattedStatus === 'mitigated' 
       ? 'bg-teal-500/10 text-teal-500 border-teal-500/30'
       : 'bg-red-500/10 text-red-500 border-red-500/30';
   };
+  
+  const getAttackTypeLabel = (attackType: string) => {
+    // We've already transformed the attack type in processedThreats
+    return attackType.toLowerCase() === 'unknown' ? 'Detected' : attackType;
+  }
   
   return (
     <Card className="h-full flex flex-col">
@@ -119,7 +157,7 @@ export const LiveAttackFeed = ({ threats }: LiveAttackFeedProps) => {
                         {getIconForAttackType(threat.attack_type)}
                       </div>
                       <div>
-                        <h4 className="text-sm font-medium">{threat.attack_type}</h4>
+                        <h4 className="text-sm font-medium">{getAttackTypeLabel(threat.attack_type)}</h4>
                         <div className="flex items-center text-xs text-muted-foreground">
                           <Clock className="h-3 w-3 mr-1" />
                           {format(new Date(threat.timestamp), 'MMM dd, HH:mm:ss')}
@@ -131,7 +169,7 @@ export const LiveAttackFeed = ({ threats }: LiveAttackFeedProps) => {
                         {threat.severity}
                       </Badge>
                       <Badge variant="outline" className={getStatusColor(threat.status)}>
-                        {threat.status}
+                        {getStatusLabel(threat.status)}
                       </Badge>
                     </div>
                   </div>

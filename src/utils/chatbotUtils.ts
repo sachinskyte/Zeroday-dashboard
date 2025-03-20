@@ -1,5 +1,5 @@
 import { BlockchainData, ThreatData } from '@/hooks/useThreatData';
-import { ATTACK_TYPES, transformAttackType } from './attackTypes';
+import { ATTACK_TYPES, transformAttackType, generateConsistentIP, addBlockedIP } from './attackTypes';
 
 /**
  * Extracts ThreatData from BlockchainData
@@ -15,9 +15,20 @@ export const extractThreatData = (blockchainData: BlockchainData | null): Threat
     )
     .map(block => {
       const data = block.data as ThreatData;
+      const transformedAttackType = transformAttackType(data.attack_type, data.id);
+      
+      // Generate consistent IP if it's an unknown attack type
+      let ip = data.ip;
+      if (data.attack_type.toLowerCase() === 'unknown' || !data.ip) {
+        ip = generateConsistentIP(data.id);
+        // Add this IP to blocked IPs list
+        addBlockedIP(ip);
+      }
+      
       return {
         ...data,
-        attack_type: transformAttackType(data.attack_type, data.id)
+        attack_type: transformedAttackType,
+        ip
       };
     });
 };

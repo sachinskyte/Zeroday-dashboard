@@ -1,9 +1,10 @@
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, LineChart, Line, CartesianGrid, Legend } from 'recharts';
 import { ThreatData } from '@/hooks/useThreatData';
 import { format, subDays, startOfDay, endOfDay, isEqual } from 'date-fns';
 import { AlertOctagon, TrendingUp } from 'lucide-react';
+import { transformAttackType } from '@/utils/attackTypes';
 
 interface ThreatTrendsProps {
   threats: ThreatData[];
@@ -13,36 +14,6 @@ const ThreatTrends = ({ threats }: ThreatTrendsProps) => {
   const [dailyData, setDailyData] = useState<any[]>([]);
   const [typeData, setTypeData] = useState<any[]>([]);
   const previousThreatsRef = useRef<ThreatData[]>([]);
-  
-  // Function to transform unknown attack types to specific types
-  const transformAttackType = (attackType: string, id: string): string => {
-    if (attackType.toLowerCase() === 'unknown') {
-      // Common attack types to replace unknown
-      const attackTypes = [
-        'SQL Injection',
-        'XSS',
-        'DDOS',
-        'Brute Force',
-        'Ransomware',
-        'MITM',
-        'Credential Stuffing',
-        'Memory Corruption',
-        'Supply Chain Attack',
-        'Phishing Attack',
-        'Directory Traversal',
-        'Command Injection',
-        'Remote Code Execution',
-        'Server-Side Request Forgery',
-        'Advanced Persistent Threat'
-      ];
-      
-      // Deterministically choose an attack type based on the ID
-      const hash = id.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
-      return attackTypes[hash % attackTypes.length];
-    }
-    
-    return attackType;
-  };
   
   // Function to check if threats data has actually changed in a meaningful way
   const hasThreatsChanged = (oldThreats: ThreatData[], newThreats: ThreatData[]) => {
@@ -66,12 +37,11 @@ const ThreatTrends = ({ threats }: ThreatTrendsProps) => {
   };
   
   useEffect(() => {
-    // Only process data if threats actually changed or this is the first render
-    if (!threats.length || (!hasThreatsChanged(previousThreatsRef.current, threats) && dailyData.length > 0)) {
+    // Skip processing if threats have not actually changed
+    if (!hasThreatsChanged(previousThreatsRef.current, threats)) {
       return;
     }
     
-    // Update the ref with current threats
     previousThreatsRef.current = [...threats];
     
     // Generate data for daily trends (last 7 days)
@@ -106,22 +76,28 @@ const ThreatTrends = ({ threats }: ThreatTrendsProps) => {
     
     setDailyData(last7Days);
     
-    // Aggregate threats by type
-    const attackTypes: Record<string, number> = {};
-    threats.forEach(threat => {
+    // Group threats by attack type
+    const threatsByType = threats.reduce((acc, threat) => {
       const transformedType = transformAttackType(threat.attack_type, threat.id);
-      if (!attackTypes[transformedType]) {
-        attackTypes[transformedType] = 0;
+      
+      if (!acc[transformedType]) {
+        acc[transformedType] = {
+          type: transformedType,
+          count: 0
+        };
       }
-      attackTypes[transformedType]++;
-    });
+      
+      acc[transformedType].count += 1;
+      
+      return acc;
+    }, {} as Record<string, any>);
     
-    // Convert to array and sort by count
-    const typeArray = Object.entries(attackTypes).map(([name, value]) => ({ name, value }));
-    typeArray.sort((a, b) => b.value - a.value);
+    // Sort and limit to top types (all 4 types)
+    const sortedTypes = Object.values(threatsByType)
+      .sort((a: any, b: any) => b.count - a.count);
     
-    setTypeData(typeArray.slice(0, 5)); // Top 5 attack types
-  }, [threats, dailyData.length]);
+    setTypeData(sortedTypes);
+  }, [threats]);
   
   const CustomTooltip = ({ active, payload, label }: any) => {
     if (active && payload && payload.length) {
@@ -202,7 +178,7 @@ const ThreatTrends = ({ threats }: ThreatTrendsProps) => {
         
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-base font-medium">Top Attack Types</CardTitle>
+            <CardTitle className="text-base font-medium">Attack Type Distribution</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="h-[300px]">
@@ -221,7 +197,7 @@ const ThreatTrends = ({ threats }: ThreatTrendsProps) => {
                       tickLine={false}
                     />
                     <YAxis 
-                      dataKey="name" 
+                      dataKey="type" 
                       type="category" 
                       tick={{ fontSize: 12 }}
                       axisLine={false}
@@ -230,7 +206,7 @@ const ThreatTrends = ({ threats }: ThreatTrendsProps) => {
                     />
                     <Tooltip content={<CustomTooltip />} />
                     <Bar 
-                      dataKey="value" 
+                      dataKey="count" 
                       name="Count" 
                       fill="#007AFF" 
                       radius={[0, 4, 4, 0]}

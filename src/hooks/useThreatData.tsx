@@ -1,15 +1,15 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { toast } from 'sonner';
 import { generateDemoData } from '@/utils/demoData';
+import { AttackType } from '@/utils/attackTypes';
 
 export interface ThreatDetail {
-  destination_port: number;
-  flag: string;
-  method: string;
-  protocol: string;
-  source_port: number;
   url_path: string;
-  user_agent: string;
+  protocol?: string;
+  destination_port?: number;
+  user_agent?: string;
+  method?: string;
+  target_resource?: string;
 }
 
 export interface ThreatData {

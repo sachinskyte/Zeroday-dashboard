@@ -7,9 +7,9 @@ import BlockchainViewer from '@/features/blockchain/BlockchainViewer';
 import ThreatChart from '@/components/charts/ThreatChart';
 import AlertBanner from '@/components/alerts/AlertBanner';
 import ThreatTrends from '@/components/charts/ThreatTrends';
+import BlockedIPs from '@/components/BlockedIPs';
 import ConnectionStatus from '@/features/settings/ConnectionStatus';
 import { useThreatData, ThreatData } from '@/hooks/useThreatData';
-import { Toaster, toast } from 'sonner';
 import { ThemeProvider } from '@/components/theme-provider';
 import { Shield, AlertOctagon, Settings } from 'lucide-react';
 import { getFromStorage, saveToStorage } from '@/utils/storageUtils';
@@ -199,14 +199,8 @@ const Index = () => {
   
   useEffect(() => {
     if (isConnected && blockchainConnected) {
-      // Notify users about the chatbot feature when connected
-      toast.info(
-        'Blockchain AI Assistant is available! Click the chat icon in the bottom right corner to analyze your threat data.',
-        {
-          duration: 5000,
-          id: 'chatbot-notification', // Prevent duplicate toasts
-        }
-      );
+      // We've removed the toast notification here
+      // to reduce the number of notifications
     }
   }, [isConnected, blockchainConnected]);
   
@@ -220,7 +214,6 @@ const Index = () => {
   return (
     <ThemeProvider defaultTheme="dark">
       <div className="min-h-screen bg-gradient-to-br from-background to-secondary/10">
-        <Toaster position="top-right" richColors closeButton />
         <Header 
           isConnected={isConnected}
           connectionSettings={persistedSettings}
@@ -313,7 +306,7 @@ const Index = () => {
                 </section>
                 
                 <section className="grid grid-cols-1 md:grid-cols-12 gap-6 mb-6">
-                  <div className="md:col-span-12 h-[400px]">
+                  <div className="md:col-span-8 h-[400px]">
                     <div className="bg-background/60 backdrop-blur-sm border border-border/50 rounded-lg shadow-md h-full overflow-hidden">
                       <div className="p-4 border-b border-border/50">
                         <h2 className="text-lg font-medium">Blockchain Ledger</h2>
@@ -332,6 +325,9 @@ const Index = () => {
                         )}
                       </div>
                     </div>
+                  </div>
+                  <div className="md:col-span-4 h-[400px]">
+                    <BlockedIPs />
                   </div>
                 </section>
 
