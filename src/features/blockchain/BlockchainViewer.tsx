@@ -7,6 +7,7 @@ import { cn } from '@/lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useNavigate } from 'react-router-dom';
+import { transformAttackType } from '@/utils/attackTypes';
 
 interface BlockchainViewerProps {
   data: BlockchainData | null;
@@ -52,6 +53,50 @@ const BlockchainBlock = ({
       default:
         return <ServerIcon className={`h-4 w-4 ${blockTypeClass} mr-2`} />;
     }
+  };
+  
+  // Update the expanded view section to use transformAttackType
+  const renderExpandedContent = () => {
+    // For attack data
+    if (block.data?.attack_type) {
+      const transformedAttackType = transformAttackType(block.data.attack_type, block.data.id || block.hash);
+      
+      return (
+        <div className="mt-3 pl-6 border-l-2 border-primary/20 py-1 space-y-2">
+          <div className="flex items-center">
+            <Shield className="h-3.5 w-3.5 text-red-500 mr-1.5" />
+            <span className="font-medium">Attack Type:</span>
+            <span className="ml-2">{transformedAttackType}</span>
+          </div>
+          
+          <div className="flex items-center">
+            <ServerIcon className="h-3.5 w-3.5 text-blue-500 mr-1.5" />
+            <span className="font-medium">Source IP:</span>
+            <span className="ml-2 font-mono">{block.data.ip}</span>
+          </div>
+          
+          <div className="flex items-center">
+            <BarChart className="h-3.5 w-3.5 text-orange-500 mr-1.5" />
+            <span className="font-medium">Severity:</span>
+            <span className={`ml-2 ${
+              block.data.severity === 'High' ? 'text-red-500' : 
+              block.data.severity === 'Medium' ? 'text-orange-500' : 'text-green-500'
+            }`}>
+              {block.data.severity}
+            </span>
+          </div>
+        </div>
+      );
+    }
+    
+    // For other data types
+    return (
+      <div className="mt-3 pl-6 border-l-2 border-primary/20 py-1">
+        <pre className="text-xs whitespace-pre-wrap break-all">
+          {JSON.stringify(block.data, null, 2)}
+        </pre>
+      </div>
+    );
   };
   
   return (
@@ -115,9 +160,7 @@ const BlockchainBlock = ({
                   <FileText className="h-3.5 w-3.5 mr-1.5 mt-0.5" />
                   <div className="font-mono overflow-hidden w-full">
                     <ScrollArea className="h-[120px] w-full rounded-md">
-                      <pre className="text-xs whitespace-pre-wrap break-words p-1">
-                        {JSON.stringify(block.data, null, 2)}
-                      </pre>
+                      {renderExpandedContent()}
                     </ScrollArea>
                   </div>
                 </div>

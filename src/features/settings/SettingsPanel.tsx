@@ -1,5 +1,4 @@
-
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -8,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { Slider } from '@/components/ui/slider';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Network, Shield, Volume2, Bell, Trash2, Settings, Wifi, RefreshCcw, Save, Check, X } from 'lucide-react';
+import { Network, Shield, Volume2, Bell, Trash2, Settings, Wifi, RefreshCcw, Save, Check, X, Info } from 'lucide-react';
 import { toast } from 'sonner';
 import { isValidUrl } from '@/utils/dataUtils';
 
@@ -32,28 +31,39 @@ interface SettingsPanelProps {
 }
 
 export const SettingsPanel = ({
-  connectionSettings,
-  isConnected,
+  connectionSettings = { apiKey: '', apiUrl: '', blockchainUrl: '' },
+  isConnected = false,
   onConnect,
   onDisconnect,
   onReset,
-  soundEnabled,
-  setSoundEnabled,
-  notificationsEnabled,
-  setNotificationsEnabled,
-  soundVolume,
-  setSoundVolume,
-  connectionError
+  soundEnabled = false,
+  setSoundEnabled = () => {},
+  notificationsEnabled = false,
+  setNotificationsEnabled = () => {},
+  soundVolume = 70,
+  setSoundVolume = () => {},
+  connectionError = null
 }: SettingsPanelProps) => {
-  const [apiKey, setApiKey] = useState(connectionSettings.apiKey);
-  const [apiUrl, setApiUrl] = useState(connectionSettings.apiUrl);
-  const [blockchainUrl, setBlockchainUrl] = useState(connectionSettings.blockchainUrl);
+  const [apiKey, setApiKey] = useState(connectionSettings.apiKey || '');
+  const [apiUrl, setApiUrl] = useState(connectionSettings.apiUrl || '');
+  const [blockchainUrl, setBlockchainUrl] = useState(connectionSettings.blockchainUrl || '');
+  const [useDemoData, setUseDemoData] = useState(false);
   const [errors, setErrors] = useState<{
     apiUrl?: string;
     blockchainUrl?: string;
   }>({});
+
+  useEffect(() => {
+    // Update state when props change
+    setApiKey(connectionSettings.apiKey || '');
+    setApiUrl(connectionSettings.apiUrl || '');
+    setBlockchainUrl(connectionSettings.blockchainUrl || '');
+  }, [connectionSettings]);
   
   const validateInputs = () => {
+    // Skip validation if using demo data
+    if (useDemoData) return true;
+    
     const newErrors: {
       apiUrl?: string;
       blockchainUrl?: string;
@@ -79,10 +89,25 @@ export const SettingsPanel = ({
     if (!validateInputs()) return;
     
     try {
-      onConnect(apiKey, apiUrl, blockchainUrl);
-      toast.success('Connection settings saved');
+      // If using demo data, use demo URLs
+      if (useDemoData) {
+        onConnect(apiKey, 'https://demo.api.sentinel/threats', 'https://demo.api.sentinel/blockchain');
+        toast.success('Connected to demo data');
+      } else {
+        onConnect(apiKey, apiUrl, blockchainUrl);
+        toast.success('Connection settings saved');
+      }
     } catch (error) {
       toast.error('Failed to connect');
+      console.error('Connection error:', error);
+    }
+  };
+  
+  const handleDemoToggle = (checked: boolean) => {
+    setUseDemoData(checked);
+    if (checked) {
+      // Clear any validation errors when switching to demo mode
+      setErrors({});
     }
   };
   
@@ -95,6 +120,7 @@ export const SettingsPanel = ({
     setApiKey('');
     setApiUrl('');
     setBlockchainUrl('');
+    setUseDemoData(false);
     onReset();
     toast.info('Settings reset to default');
   };
@@ -134,6 +160,20 @@ export const SettingsPanel = ({
               </div>
             )}
             
+            <div className="flex items-center justify-between pb-4 border-b border-border">
+              <div className="space-y-0.5">
+                <Label htmlFor="test-mode">Test Mode</Label>
+                <p className="text-sm text-muted-foreground">
+                  Use demo data to test the dashboard
+                </p>
+              </div>
+              <Switch
+                id="test-mode"
+                checked={useDemoData}
+                onCheckedChange={handleDemoToggle}
+              />
+            </div>
+            
             <div className="space-y-2">
               <Label htmlFor="apiKey">API Key (Optional)</Label>
               <Input 
@@ -142,6 +182,7 @@ export const SettingsPanel = ({
                 value={apiKey} 
                 onChange={(e) => setApiKey(e.target.value)} 
                 type="password"
+                disabled={useDemoData}
               />
             </div>
             
@@ -160,6 +201,7 @@ export const SettingsPanel = ({
                   }
                 }}
                 className={errors.apiUrl ? "border-red-500" : ""}
+                disabled={useDemoData}
               />
               {errors.apiUrl && (
                 <p className="text-red-500 text-xs mt-1">{errors.apiUrl}</p>
@@ -181,9 +223,16 @@ export const SettingsPanel = ({
                   }
                 }}
                 className={errors.blockchainUrl ? "border-red-500" : ""}
+                disabled={useDemoData}
               />
               {errors.blockchainUrl && (
                 <p className="text-red-500 text-xs mt-1">{errors.blockchainUrl}</p>
+              )}
+              {useDemoData && (
+                <p className="text-blue-500 text-xs mt-2">
+                  <Info className="h-3 w-3 inline mr-1" />
+                  Using demo data mode - no real endpoints needed
+                </p>
               )}
             </div>
           </CardContent>
@@ -212,7 +261,7 @@ export const SettingsPanel = ({
             
             <Button 
               onClick={handleConnect} 
-              disabled={!apiUrl || !blockchainUrl}
+              disabled={!useDemoData && (!apiUrl || !blockchainUrl)}
             >
               {isConnected ? (
                 <>
@@ -255,30 +304,29 @@ export const SettingsPanel = ({
             
             <div className="flex items-center justify-between">
               <div className="space-y-0.5">
-                <Label htmlFor="sound">Sound Alerts</Label>
+                <Label htmlFor="sound">Alert Sounds</Label>
                 <p className="text-sm text-muted-foreground">
                   Play sound when high severity threats are detected
                 </p>
               </div>
-              <Switch 
-                id="sound" 
-                checked={soundEnabled} 
+              <Switch
+                id="sound"
+                checked={soundEnabled}
                 onCheckedChange={setSoundEnabled}
               />
             </div>
             
-            <div className="space-y-2">
+            <div className="space-y-3">
               <div className="flex items-center justify-between">
-                <Label htmlFor="volume">Alert Volume</Label>
+                <Label htmlFor="volume">Sound Volume</Label>
                 <span className="text-sm text-muted-foreground">{soundVolume}%</span>
               </div>
               <Slider
                 id="volume"
-                disabled={!soundEnabled}
-                min={0}
+                defaultValue={[soundVolume]}
                 max={100}
                 step={1}
-                value={[soundVolume]}
+                disabled={!soundEnabled}
                 onValueChange={(value) => setSoundVolume(value[0])}
                 className={!soundEnabled ? "opacity-50" : ""}
               />
@@ -290,30 +338,32 @@ export const SettingsPanel = ({
       <TabsContent value="about">
         <Card>
           <CardHeader>
-            <CardTitle>About Sentinel</CardTitle>
+            <CardTitle>About Sentinel Dashboard</CardTitle>
             <CardDescription>
-              Cybersecurity threat monitoring and blockchain verification
+              Real-time blockchain-secured threat intelligence
             </CardDescription>
           </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="flex justify-center my-4">
-              <Shield className="h-16 w-16 text-primary opacity-80" />
-            </div>
+          <CardContent className="space-y-4 text-sm">
+            <p>
+              Sentinel is an advanced security dashboard that monitors and displays real-time threat intelligence.
+              The system securely records all detected threats on an immutable blockchain ledger, ensuring data
+              integrity and providing a tamper-proof audit trail.
+            </p>
             
-            <div className="space-y-2 text-sm">
-              <h3 className="font-medium">Features:</h3>
-              <ul className="list-disc pl-5 space-y-1 text-muted-foreground">
-                <li>Real-time threat monitoring</li>
-                <li>Immutable blockchain verification</li>
-                <li>Geographic attack visualization</li>
-                <li>Trend analysis and reporting</li>
-                <li>Configurable alerts and notifications</li>
+            <div className="space-y-2">
+              <h4 className="font-medium">Features:</h4>
+              <ul className="list-disc pl-5 space-y-1">
+                <li>Real-time threat monitoring and alerting</li>
+                <li>Blockchain-verified threat data</li>
+                <li>Advanced threat analytics and visualization</li>
+                <li>Attack pattern recognition</li>
+                <li>Secure, immutable security audit trail</li>
               </ul>
             </div>
             
-            <div className="pt-4">
-              <p className="text-xs text-muted-foreground text-center">
-                Version 1.0.0 • Created with ❤️ by the Security Team
+            <div className="py-2">
+              <p className="text-xs text-muted-foreground">
+                Version 1.0.0 • © 2023 Sentinel Security
               </p>
             </div>
           </CardContent>

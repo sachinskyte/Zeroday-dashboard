@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, forwardRef, Ref } from 'react';
 import { Dialog, DialogContent, DialogTrigger } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { SettingsPanel } from '@/features/settings/SettingsPanel';
@@ -26,26 +26,33 @@ interface HeaderProps {
   subtitle?: string;
 }
 
-const Header = ({
-  isConnected,
-  connectionSettings,
-  onConnect,
-  onDisconnect,
-  onReset,
-  soundEnabled,
-  setSoundEnabled,
-  notificationsEnabled,
-  setNotificationsEnabled,
-  soundVolume,
-  setSoundVolume,
-  connectionError,
-  title = "Sentinel",
-  subtitle
-}: HeaderProps) => {
+const Header = forwardRef<HTMLButtonElement, HeaderProps>(function Header(
+  {
+    isConnected,
+    connectionSettings = { apiKey: '', apiUrl: '', blockchainUrl: '' },
+    onConnect,
+    onDisconnect,
+    onReset,
+    soundEnabled = false,
+    setSoundEnabled,
+    notificationsEnabled = false,
+    setNotificationsEnabled,
+    soundVolume = 70,
+    setSoundVolume,
+    connectionError,
+    title = "Sentinel",
+    subtitle
+  },
+  ref
+) {
   const [settingsOpen, setSettingsOpen] = useState(false);
   
   // Check if it's a simplified header (e.g., for CyberGuard)
   const isSimplifiedHeader = !onConnect;
+
+  const handleSettingsTriggerClick = () => {
+    setSettingsOpen(true);
+  };
   
   return (
     <header className="fixed top-0 left-0 right-0 dark-nav z-50">
@@ -107,9 +114,11 @@ const Header = ({
                 <DialogTrigger asChild>
                   <Button 
                     id="settings-trigger"
+                    ref={ref}
                     variant={connectionError ? "destructive" : "outline"} 
                     size="sm"
                     className="flex items-center"
+                    onClick={handleSettingsTriggerClick}
                   >
                     {connectionError && <AlertTriangle className="h-4 w-4 mr-2" />}
                     <Settings className="h-4 w-4 mr-2" />
@@ -117,19 +126,19 @@ const Header = ({
                   </Button>
                 </DialogTrigger>
                 <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
-                  {connectionSettings && onConnect && onDisconnect && onReset && soundVolume && setSoundVolume && (
+                  {onConnect && onDisconnect && onReset && (
                     <SettingsPanel
                       connectionSettings={connectionSettings}
                       isConnected={!!isConnected}
                       onConnect={onConnect}
                       onDisconnect={onDisconnect}
                       onReset={onReset}
-                      soundEnabled={!!soundEnabled}
+                      soundEnabled={soundEnabled}
                       setSoundEnabled={setSoundEnabled || (() => {})}
-                      notificationsEnabled={!!notificationsEnabled}
+                      notificationsEnabled={notificationsEnabled}
                       setNotificationsEnabled={setNotificationsEnabled || (() => {})}
                       soundVolume={soundVolume}
-                      setSoundVolume={setSoundVolume}
+                      setSoundVolume={setSoundVolume || (() => {})}
                       connectionError={connectionError || null}
                     />
                   )}
@@ -141,6 +150,8 @@ const Header = ({
       </div>
     </header>
   );
-};
+});
+
+Header.displayName = "Header";
 
 export default Header;

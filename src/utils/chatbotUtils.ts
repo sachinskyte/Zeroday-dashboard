@@ -1,4 +1,5 @@
 import { BlockchainData, ThreatData } from '@/hooks/useThreatData';
+import { ATTACK_TYPES, transformAttackType } from './attackTypes';
 
 /**
  * Extracts ThreatData from BlockchainData
@@ -12,7 +13,13 @@ export const extractThreatData = (blockchainData: BlockchainData | null): Threat
       typeof block.data === 'object' && 
       'attack_type' in block.data
     )
-    .map(block => block.data as ThreatData);
+    .map(block => {
+      const data = block.data as ThreatData;
+      return {
+        ...data,
+        attack_type: transformAttackType(data.attack_type, data.id)
+      };
+    });
 };
 
 /**
@@ -134,6 +141,7 @@ export const analyzeSeverityTrends = (threatData: ThreatData[]) => {
  * Provides threat mitigation suggestions based on attack types
  */
 export const getThreatMitigationSuggestions = (attackType: string): string[] => {
+  const transformedType = transformAttackType(attackType, attackType);
   const mitigations: Record<string, string[]> = {
     'sql injection': [
       'Use parameterized queries instead of concatenating strings',
@@ -153,18 +161,6 @@ export const getThreatMitigationSuggestions = (attackType: string): string[] => 
       'Scale infrastructure automatically during attacks',
       'Deploy DDoS protection services like Cloudflare'
     ],
-    'brute force': [
-      'Implement account lockout policies',
-      'Use captcha for login attempts',
-      'Require strong passwords and 2FA',
-      'Add time delays between login attempts'
-    ],
-    'zero-day': [
-      'Keep all systems patched and updated regularly',
-      'Implement behavioral analysis and anomaly detection',
-      'Use runtime application self-protection (RASP)',
-      'Employ defense-in-depth strategies with multiple security layers'
-    ],
     'ransomware': [
       'Maintain regular and offline backups',
       'Implement application whitelisting',
@@ -173,17 +169,7 @@ export const getThreatMitigationSuggestions = (attackType: string): string[] => 
     ]
   };
   
-  // Find matching attack type (case insensitive partial match)
-  const matchedKey = Object.keys(mitigations).find(key => 
-    attackType.toLowerCase().includes(key)
-  );
-  
-  if (matchedKey) {
-    return mitigations[matchedKey];
-  }
-  
-  // Default mitigations for unknown attack types
-  return [
+  return mitigations[transformedType.toLowerCase()] || [
     'Keep all systems and applications updated with security patches',
     'Implement strong access controls and authentication mechanisms',
     'Monitor logs and network traffic for suspicious activity',

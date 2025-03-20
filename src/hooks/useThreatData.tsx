@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { toast } from 'sonner';
+import { generateDemoData } from '@/utils/demoData';
 
 export interface ThreatDetail {
   destination_port: number;
@@ -53,14 +54,21 @@ export const useThreatData = (settings: useThreatDataProps) => {
   const [lastSuccessfulFetch, setLastSuccessfulFetch] = useState<Date | null>(null);
   
   const [blockchainConnected, setBlockchainConnected] = useState(false);
+  const [apiConnected, setApiConnected] = useState(false);
+  const [usingFallbackData, setUsingFallbackData] = useState(false);
   
-  const { blockchainUrl } = settings;
+  const { blockchainUrl, apiUrl } = settings;
   
   const intervalRef = useRef<number | null>(null);
   const reconnectTimeoutRef = useRef<number | null>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
   const seenThreatIdsRef = useRef<Set<string>>(new Set());
   const previousThreatDataRef = useRef<ThreatData[]>([]);
+  const demoDataRef = useRef<{ data: BlockchainData, lastUpdated: number } | null>(null);
+
+  const isDemoMode = useCallback(() => {
+    return blockchainUrl?.includes('demo.api.sentinel') || apiUrl?.includes('demo.api.sentinel');
+  }, [blockchainUrl, apiUrl]);
 
   const processBlockchainData = (data: BlockchainData): ThreatData[] => {
     return data.chain
@@ -68,8 +76,48 @@ export const useThreatData = (settings: useThreatDataProps) => {
       .map(block => block.data as ThreatData);
   };
 
+  const getDemoData = useCallback(() => {
+    const now = Date.now();
+    
+    if (!demoDataRef.current || (now - demoDataRef.current.lastUpdated > 30000)) {
+      demoDataRef.current = {
+        data: generateDemoData(),
+        lastUpdated: now
+      };
+    }
+    
+    return demoDataRef.current.data;
+  }, []);
+
   const fetchBlockchainData = useCallback(async () => {
     if (!blockchainUrl) return { success: false };
+
+    if (isDemoMode()) {
+      try {
+        const demoData = getDemoData();
+        
+        const processedThreats = processBlockchainData(demoData);
+        
+        setThreatData(processedThreats);
+        setBlockchainData(demoData);
+        setLastUpdated(new Date());
+        setLastSuccessfulFetch(new Date());
+        setBlockchainConnected(true);
+        setApiConnected(true);
+        setUsingFallbackData(true);
+        
+        if (isReconnecting) {
+          setIsReconnecting(false);
+          setReconnectAttempts(0);
+          toast.success('Connected to demo blockchain');
+        }
+        
+        return { success: true };
+      } catch (err) {
+        console.error("Error generating demo data:", err);
+        return { success: false };
+      }
+    }
     
     if (abortControllerRef.current) {
       abortControllerRef.current.abort();
@@ -109,6 +157,7 @@ export const useThreatData = (settings: useThreatDataProps) => {
       setLastUpdated(new Date());
       setLastSuccessfulFetch(new Date());
       setBlockchainConnected(true);
+      setUsingFallbackData(false);
       
       if (isReconnecting) {
         setIsReconnecting(false);
@@ -132,7 +181,7 @@ export const useThreatData = (settings: useThreatDataProps) => {
       }
       return { success: false };
     }
-  }, [blockchainUrl, isConnected, isReconnecting]);
+  }, [blockchainUrl, isConnected, isReconnecting, isDemoMode, getDemoData]);
 
   const scheduleReconnect = useCallback(() => {
     if (reconnectTimeoutRef.current) {
@@ -173,14 +222,20 @@ export const useThreatData = (settings: useThreatDataProps) => {
     setIsLoading(true);
     setError(null);
     setConnectionError(null);
+    setApiConnected(false);
+    setBlockchainConnected(false);
+    setUsingFallbackData(false);
     
-    try {
-      if (blockchainUrl) new URL(blockchainUrl);
-    } catch (err) {
-      setConnectionError("Invalid blockchain URL");
-      setIsLoading(false);
-      toast.error('Invalid blockchain URL');
-      return;
+    if (!isDemoMode()) {
+      try {
+        if (blockchainUrl) new URL(blockchainUrl);
+        if (apiUrl) new URL(apiUrl);
+      } catch (err) {
+        setConnectionError("Invalid URL format");
+        setIsLoading(false);
+        toast.error('Invalid URL format');
+        return;
+      }
     }
     
     if (intervalRef.current) {
@@ -192,11 +247,14 @@ export const useThreatData = (settings: useThreatDataProps) => {
       
       if (blockchainResult.success) {
         setIsConnected(true);
+        setBlockchainConnected(true);
+        setApiConnected(isDemoMode() ? true : !!apiUrl);
+        setUsingFallbackData(isDemoMode());
         intervalRef.current = window.setInterval(fetchBlockchainData, 5000);
-        toast.success('Connected to blockchain');
+        toast.success(isDemoMode() ? 'Connected to demo data' : 'Connected to blockchain');
       } else {
-        setConnectionError("Failed to connect to blockchain");
-        toast.error('Failed to connect to blockchain');
+        setConnectionError("Failed to connect to " + (isDemoMode() ? "demo data" : "blockchain"));
+        toast.error("Failed to connect to " + (isDemoMode() ? "demo data" : "blockchain"));
       }
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Connection failed';
@@ -204,11 +262,12 @@ export const useThreatData = (settings: useThreatDataProps) => {
       setError(errorMessage);
       setIsConnected(false);
       setBlockchainConnected(false);
+      setApiConnected(false);
       toast.error('Failed to connect to blockchain');
     } finally {
       setIsLoading(false);
     }
-  }, [fetchBlockchainData, blockchainUrl]);
+  }, [fetchBlockchainData, blockchainUrl, apiUrl, isDemoMode]);
 
   useEffect(() => {
     return () => {
@@ -252,8 +311,9 @@ export const useThreatData = (settings: useThreatDataProps) => {
     threatStats,
     reconnectAttempts,
     isReconnecting,
+    usingFallbackData,
     blockchainConnected,
-    apiConnected: true,
+    apiConnected,
     connectToSources,
     disconnect,
     fetchBlockchainData

@@ -1,4 +1,3 @@
-
 import { useEffect, useRef, useState } from 'react';
 import { X, AlertTriangle, Volume2, VolumeX, ShieldAlert } from 'lucide-react';
 import { ThreatData } from '@/hooks/useThreatData';
@@ -89,10 +88,10 @@ const AlertBanner = ({
   return (
     <AnimatePresence>
       <motion.div 
-        className="alert-banner mb-4"
-        initial={{ opacity: 0, y: -20 }}
+        className="alert-banner fixed bottom-6 left-1/2 transform -translate-x-1/2 bg-background/90 backdrop-blur-sm border border-border/50 rounded-lg shadow-lg py-3 px-4 w-full max-w-md z-50 flex justify-between items-center"
+        initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        exit={{ opacity: 0, y: -20 }}
+        exit={{ opacity: 0, y: 20 }}
         transition={{ duration: 0.3 }}
       >
         <div className="flex items-center gap-3">

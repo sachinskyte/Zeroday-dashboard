@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { ThreatData } from '@/hooks/useThreatData';
 import { Shield, AlertTriangle, CheckCircle, Filter, Clock, Server } from 'lucide-react';
@@ -7,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
 import { motion } from 'framer-motion';
+import { ATTACK_TYPES, transformAttackType } from '@/utils/attackTypes';
 
 interface LiveAttackFeedProps {
   threats: ThreatData[];
@@ -15,25 +15,32 @@ interface LiveAttackFeedProps {
 export const LiveAttackFeed = ({ threats }: LiveAttackFeedProps) => {
   const [filter, setFilter] = useState<'all' | 'high' | 'medium' | 'low'>('all');
   
-  const filteredThreats = threats.filter(threat => {
-    if (filter === 'all') return true;
-    return threat.severity.toLowerCase() === filter.toLowerCase();
-  }).sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
-  
   const getIconForAttackType = (attackType: string) => {
-    switch (attackType.toLowerCase()) {
+    const transformedType = transformAttackType(attackType, attackType);
+    switch (transformedType.toLowerCase()) {
       case 'sql injection':
         return <Server className="h-4 w-4" />;
       case 'xss':
         return <AlertTriangle className="h-4 w-4" />;
       case 'ddos':
         return <Server className="h-4 w-4" />;
-      case 'brute force':
-        return <Shield className="h-4 w-4" />;
+      case 'ransomware':
+        return <CheckCircle className="h-4 w-4" />;
       default:
         return <Shield className="h-4 w-4" />;
     }
   };
+  
+  // Process the threats to replace unknown attack types
+  const processedThreats = threats.map(threat => ({
+    ...threat,
+    attack_type: transformAttackType(threat.attack_type, threat.id)
+  }));
+  
+  const filteredThreats = processedThreats.filter(threat => {
+    if (filter === 'all') return true;
+    return threat.severity.toLowerCase() === filter.toLowerCase();
+  }).sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
   
   const getSeverityColor = (severity: 'High' | 'Medium' | 'Low') => {
     switch (severity) {

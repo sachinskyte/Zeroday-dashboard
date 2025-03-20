@@ -11,17 +11,20 @@ import ConnectionStatus from '@/features/settings/ConnectionStatus';
 import { useThreatData, ThreatData } from '@/hooks/useThreatData';
 import { Toaster, toast } from 'sonner';
 import { ThemeProvider } from '@/components/theme-provider';
-import { Shield, AlertOctagon } from 'lucide-react';
+import { Shield, AlertOctagon, Settings } from 'lucide-react';
 import { getFromStorage, saveToStorage } from '@/utils/storageUtils';
 import { playAudio, initializeAudio } from '@/utils/audioUtils';
 import { getNewHighSeverityThreats } from '@/utils/dataUtils';
 import { useNavigate } from 'react-router-dom';
+import { Button } from '@/components/ui/button';
 
 // Create and add alert.mp3 to public folder
 const ALERT_SOUND_URL = '/alert.mp3';
 
 const Index = () => {
   const navigate = useNavigate();
+  const settingsTriggerRef = useRef<HTMLButtonElement>(null);
+  
   // Load persisted settings from localStorage with error handling
   const [persistedSettings, setPersistedSettings] = useState(() => 
     getFromStorage('sentinel-connection-settings', {
@@ -207,6 +210,13 @@ const Index = () => {
     }
   }, [isConnected, blockchainConnected]);
   
+  // Handle opening settings dialog
+  const handleOpenSettings = useCallback(() => {
+    if (settingsTriggerRef.current) {
+      settingsTriggerRef.current.click();
+    }
+  }, []);
+  
   return (
     <ThemeProvider defaultTheme="dark">
       <div className="min-h-screen bg-gradient-to-br from-background to-secondary/10">
@@ -224,6 +234,7 @@ const Index = () => {
           soundVolume={soundVolume}
           setSoundVolume={setSoundVolume}
           connectionError={connectionError}
+          ref={settingsTriggerRef}
         />
         
         <main className="container mx-auto pt-24 pb-16 px-4 sm:px-6">
@@ -242,16 +253,6 @@ const Index = () => {
           )}
           
           <div className="space-y-6">
-            {currentAlert && (
-              <AlertBanner 
-                threat={currentAlert} 
-                onClose={() => setCurrentAlert(null)} 
-                soundEnabled={soundEnabled}
-                soundVolume={soundVolume}
-                toggleSound={toggleSound}
-              />
-            )}
-            
             {!isConnected && !isLoading && !isReconnecting ? (
               <div className="h-[70vh] flex flex-col items-center justify-center">
                 <div className="text-center space-y-6 max-w-lg">
@@ -268,12 +269,13 @@ const Index = () => {
                     </div>
                   )}
                   <div className="flex justify-center">
-                    <button 
-                      onClick={() => document.getElementById('settings-trigger')?.click()}
+                    <Button 
+                      onClick={handleOpenSettings}
                       className="connect-button group"
                     >
+                      <Settings className="h-4 w-4 mr-2" />
                       Configure Connection
-                    </button>
+                    </Button>
                   </div>
                 </div>
               </div>
@@ -311,17 +313,7 @@ const Index = () => {
                 </section>
                 
                 <section className="grid grid-cols-1 md:grid-cols-12 gap-6 mb-6">
-                  <div className="md:col-span-8 h-[400px]">
-                    <div className="bg-background/60 backdrop-blur-sm border border-border/50 rounded-lg shadow-md h-full overflow-hidden">
-                      <div className="p-4 border-b border-border/50">
-                        <h2 className="text-lg font-medium">Global Threat Map</h2>
-                      </div>
-                      <div className="h-[calc(100%-61px)]">
-                        <ThreatMap threats={threatData} />
-                      </div>
-                    </div>
-                  </div>
-                  <div className="md:col-span-4 h-[400px]">
+                  <div className="md:col-span-12 h-[400px]">
                     <div className="bg-background/60 backdrop-blur-sm border border-border/50 rounded-lg shadow-md h-full overflow-hidden">
                       <div className="p-4 border-b border-border/50">
                         <h2 className="text-lg font-medium">Blockchain Ledger</h2>
@@ -357,6 +349,17 @@ const Index = () => {
             )}
           </div>
         </main>
+        
+        {/* Floating notification at bottom */}
+        {currentAlert && (
+          <AlertBanner 
+            threat={currentAlert} 
+            onClose={() => setCurrentAlert(null)} 
+            soundEnabled={soundEnabled}
+            soundVolume={soundVolume}
+            toggleSound={toggleSound}
+          />
+        )}
       </div>
     </ThemeProvider>
   );
